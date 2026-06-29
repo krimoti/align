@@ -2,18 +2,28 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>🪐 Planet Genesis 4.0</title>
+<title>🪐 Planet Genesis 4.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 :root{--blue:#00f5ff;--green:#00ff88;--gold:#ffd700;--purple:#bf5fff;--red:#ff4466;--orange:#ff8800;--panel:rgba(0,8,35,0.88);--border:rgba(0,245,255,0.2);}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Inter',sans-serif;}
-body{padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);}
-canvas{position:absolute;top:0;left:0;display:block;}
+html,body{
+  width:100%;height:100%;overflow:hidden;background:#000;
+  font-family:'Inter',sans-serif;
+}
+/* For iPhone with notch/home bar - use safe areas */
+#wrap{
+  position:fixed;inset:0;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-right:env(safe-area-inset-right,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:env(safe-area-inset-left,0px);
+}
+canvas{position:absolute;top:0;left:0;display:block;width:100%;height:100%;}
 #c-bg{z-index:1;}#c-game{z-index:2;}#c-ui{z-index:3;pointer-events:none;}
 .screen{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,rgba(2,2,22,.97),#000);}
 .screen.off{display:none;}
@@ -41,6 +51,44 @@ canvas{position:absolute;top:0;left:0;display:block;}
 .btn-sec{font-family:'Orbitron',monospace;font-size:11px;background:rgba(0,40,100,.4);color:var(--blue);border:1px solid rgba(0,245,255,.3);border-radius:28px;padding:8px 22px;cursor:pointer;letter-spacing:1px;transition:all .12s;margin:4px;}
 .btn-sec:hover{background:rgba(0,80,180,.35);}
 .small-note{font-size:9px;color:rgba(255,255,255,.22);letter-spacing:1px;margin-top:8px;}
+
+/* ── KEYBOARD LEGEND (desktop only) ── */
+.legend{display:none;margin:14px 0 8px;text-align:right;}
+@media(pointer:fine){.legend{display:block;}}
+.legend-title{
+  font-family:'Orbitron',monospace;font-size:9px;letter-spacing:3px;
+  color:rgba(0,245,255,.6);margin-bottom:10px;text-align:center;text-transform:uppercase;
+}
+.legend-section{margin-bottom:12px;}
+.legend-section-title{
+  font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;
+  color:rgba(255,255,255,.35);margin-bottom:6px;padding-bottom:4px;
+  border-bottom:1px solid rgba(0,245,255,.1);
+}
+.legend-row{
+  display:flex;align-items:center;gap:8px;padding:4px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.legend-row:last-child{border-bottom:none;}
+.kbd{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:28px;height:26px;padding:0 7px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);
+  border-bottom:3px solid rgba(255,255,255,.15);
+  border-radius:6px;font-family:'Orbitron',monospace;font-size:10px;
+  font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.5px;
+  flex-shrink:0;
+}
+.kbd.wide{min-width:44px;}
+.kbd.arrow{font-size:13px;min-width:28px;}
+.legend-ico{font-size:18px;flex-shrink:0;width:24px;text-align:center;}
+.legend-desc{font-size:11px;color:rgba(255,255,255,.65);flex:1;text-align:right;}
+.legend-desc b{color:rgba(0,245,255,.9);font-weight:600;}
+.legend-or{font-size:9px;color:rgba(255,255,255,.25);flex-shrink:0;}
+.legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+
+/* hide old ctrl-grid on desktop since legend replaces it */
+@media(pointer:fine){.ctrl-grid{display:none;}}
 /* ══════════════════════════════════════
    HUD — compact top bar
 ══════════════════════════════════════ */
@@ -183,63 +231,183 @@ canvas{position:absolute;top:0;left:0;display:block;}
    Portrait:  left:8px bottom:90px
    Landscape: left:8px bottom:8px (bigger)
 ══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   ERGONOMIC CONTROL LAYOUT
+   
+   LEFT ZONE (thumb zone ~120px from left):
+     [▲]           ← jump, above left thumb rest
+   [◀] [🔨] [▶]   ← movement row, natural thumb sweep
+   
+   RIGHT ZONE (thumb zone ~120px from right):
+     [💎] [🔆]    ← top row actions
+     [🛡️] [⚡]   ← bottom row actions
+   
+   BUILD STRIP: compact, centered above controls
+═══════════════════════════════════════════════════════ */
+
+/* ── LEFT CONTROL ZONE ───────────────────────────────── */
 #dpad{
-  position:absolute;bottom:88px;left:8px;z-index:10;display:none;
-  grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px 52px;gap:4px;
+  position:fixed;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  left:12px;
+  z-index:10;
+  display:none;          /* set to flex by showGameUI */
+  flex-direction:column;
+  align-items:flex-start;
+  gap:6px;
 }
+.dp-row{
+  display:flex;
+  flex-direction:row;
+  gap:6px;
+  align-items:center;
+}
+
+/* Base button style */
 .dp{
-  background:rgba(0,8,30,.78);border:1px solid rgba(0,245,255,.18);border-radius:12px;
+  width:64px; height:64px;
+  background:rgba(5,10,35,.82);
+  border:2px solid rgba(0,245,255,.28);
+  border-radius:16px;
   display:flex;align-items:center;justify-content:center;
-  font-size:20px;color:rgba(255,255,255,.65);cursor:pointer;
-  transition:background .08s,border-color .08s;backdrop-filter:blur(6px);
-  user-select:none;-webkit-user-select:none;
+  font-size:0;                 /* use ::after for symbol */
+  cursor:pointer;
+  transition:background .06s, transform .06s, border-color .1s;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+  -webkit-touch-callout:none;
+  flex-shrink:0;
 }
-.dp:active,.dp.held{background:rgba(0,110,230,.45);border-color:var(--blue);color:#fff;}
-/* explicit arrow symbols — no RTL confusion */
-#dp-up::after{content:'▲';}
-#dp-down::after{content:'▼';}
-#dp-left::after{content:'◀';} /* always left-pointing */
-#dp-right::after{content:'▶';} /* always right-pointing */
-#dp-up,#dp-down,#dp-left,#dp-right{font-size:0;} /* hide original text, show ::after */
+.dp:active, .dp.held {
+  background:rgba(0,140,255,.45);
+  border-color:#00f5ff;
+  transform:scale(.88);
+}
 
-/* ══════════════════════════════════════
-   ACTION BUTTONS — bottom right, 2×2 grid
-══════════════════════════════════════ */
+/* ── ARROW SYMBOLS ── forced LTR, no RTL flip */
+#dp-up::after    { content:'▲'; font-size:26px; color:rgba(255,255,255,.9); }
+#dp-left::after  { content:'◀'; font-size:26px; color:rgba(255,255,255,.9); }
+#dp-right::after { content:'▶'; font-size:26px; color:rgba(255,255,255,.9); }
+#dp-up, #dp-left, #dp-right { direction:ltr !important; unicode-bidi:bidi-override; }
+
+/* Center BUILD button — smaller, between left+right */
+#dp-center {
+  width:52px; height:52px;
+  border-color:rgba(0,255,136,.35);
+  background:rgba(0,30,15,.8);
+}
+#dp-center::after { content:'🔨'; font-size:24px; }
+#dp-center:active, #dp-center.held {
+  background:rgba(0,180,80,.45);
+  border-color:#00ff88;
+  transform:scale(.88);
+}
+
+/* ── RIGHT ACTION ZONE ───────────────────────────────── */
 #actions{
-  position:absolute;bottom:88px;right:8px;z-index:10;
+  position:fixed;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  right:12px;
+  z-index:10;
   display:none;
-  display:grid;grid-template-columns:54px 54px;grid-template-rows:54px 54px;gap:5px;
+  grid-template-columns:60px 60px 60px;
+  grid-template-rows:60px 60px;
+  gap:5px;
 }
-.act{
-  border-radius:14px;border:1px solid rgba(0,245,255,.22);
-  background:rgba(0,8,30,.82);backdrop-filter:blur(8px);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  cursor:pointer;color:#fff;gap:1px;user-select:none;-webkit-user-select:none;
-  transition:background .08s,border-color .08s;
+/* Desktop: actions larger */
+@media(pointer:fine){
+  #actions{
+    bottom:16px; right:16px;
+    grid-template-columns:70px 70px 70px;
+    grid-template-rows:70px 70px;
+    gap:6px;
+  }
+  .act .a-ico { font-size:26px; }
+  .act .a-lbl { font-size:8px; }
+  .act .a-cost{ font-size:8px; }
+  /* build panel needs to clear the taller desktop action buttons */
+  #build-panel { bottom:178px; }
 }
-.act .a-ico{font-size:20px;line-height:1;}
-.act .a-lbl{font-family:'Orbitron',monospace;font-size:6px;letter-spacing:.5px;}
-.act .a-cost{font-size:6px;color:var(--blue);opacity:.7;}
-.act:active{background:rgba(0,90,210,.45);border-color:var(--blue);}
-.act.beam:active{border-color:var(--gold);}
-.act.shield:active{border-color:var(--green);}
-.act.lightning-btn:active{border-color:var(--purple);}
 
-/* ══════════════════════════════════════
-   BUILD PANEL — centered at bottom
-══════════════════════════════════════ */
+.act{
+  border-radius:16px;
+  border:2px solid rgba(0,245,255,.28);
+  background:rgba(5,10,35,.82);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  cursor:pointer;color:#fff;gap:2px;
+  user-select:none;-webkit-user-select:none;
+  touch-action:none;-webkit-touch-callout:none;
+  transition:background .06s, transform .06s, border-color .1s;
+}
+.act .a-ico { font-size:24px; line-height:1; }
+.act .a-lbl { font-family:'Orbitron',monospace; font-size:7px; letter-spacing:.5px; opacity:.75; }
+.act .a-cost{ font-size:7px; color:#00f5ff; opacity:.6; }
+.act:active, .act.held { transform:scale(.88); }
+#btn-collect:active, #btn-collect.held { background:rgba(0,120,255,.45); border-color:#00f5ff; }
+.act.beam:active, .act.beam.held       { background:rgba(200,160,0,.4);  border-color:#ffd700; }
+.act.shield:active, .act.shield.held   { background:rgba(0,180,80,.38);  border-color:#00ff88; }
+.act.lightning-btn:active, .act.lightning-btn.held { background:rgba(140,0,255,.4); border-color:#bf5fff; }
+.act.build-btn { border-color:rgba(0,255,136,.3); }
+.act.build-btn:active, .act.build-btn.held { background:rgba(0,180,80,.4); border-color:#00ff88; }
+.act.cycle-btn { border-color:rgba(255,215,0,.3); }
+.act.cycle-btn:active, .act.cycle-btn.held { background:rgba(180,140,0,.35); border-color:#ffd700; }
+
+/* ── BUILD PANEL ─────────────────────────────────────── */
 #build-panel{
-  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:10;
-  display:none;background:rgba(0,6,28,.88);border:1px solid var(--border);
-  border-radius:18px;padding:4px 8px;align-items:center;gap:3px;
+  position:fixed;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 152px);
+  left:50%; transform:translateX(-50%);
+  z-index:10; display:none;
+  background:rgba(0,6,28,.9);
+  border:1px solid rgba(0,245,255,.22);
+  border-radius:18px;
+  padding:4px 8px;
+  align-items:center; gap:2px;
   backdrop-filter:blur(8px);
 }
-.build-lbl{font-family:'Orbitron',monospace;font-size:6px;letter-spacing:1px;color:rgba(255,255,255,.25);margin-left:2px;}
-.bi{display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 7px;border-radius:9px;cursor:pointer;transition:all .11s;border:1px solid transparent;position:relative;}
-.bi.sel{background:rgba(0,245,255,.1);border-color:rgba(0,245,255,.4);}
-.bi .b-ico{font-size:19px;}
-.bi .b-cost{font-family:'Orbitron',monospace;font-size:7px;color:var(--blue);}
-.bi .b-dot{position:absolute;top:2px;right:2px;width:5px;height:5px;border-radius:50%;}
+.build-lbl{
+  font-family:'Orbitron',monospace;font-size:6px;
+  letter-spacing:1px;color:rgba(255,255,255,.2);margin-left:2px;
+}
+.bi{
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:4px 8px;border-radius:10px;cursor:pointer;
+  transition:all .1s;border:1px solid transparent;position:relative;
+  touch-action:none;-webkit-touch-callout:none;user-select:none;
+}
+.bi.sel{ background:rgba(0,245,255,.12); border-color:rgba(0,245,255,.5); }
+.bi .b-ico  { font-size:21px; }
+.bi .b-cost { font-family:'Orbitron',monospace; font-size:7px; color:#00f5ff; }
+.bi .b-dot  { position:absolute;top:2px;right:2px;width:5px;height:5px;border-radius:50%; }
+
+/* ── LANDSCAPE (iPhone rotated) ──────────────────────── */
+@media(orientation:landscape){
+  /* Smaller buttons to save vertical space */
+  .dp        { width:52px; height:52px; border-radius:13px; }
+  #dp-center { width:42px; height:42px; }
+  #dp-up::after,#dp-left::after,#dp-right::after { font-size:22px; }
+  #dp-center::after { font-size:20px; }
+  #actions   { grid-template-columns:52px 52px; grid-template-rows:52px 52px; gap:5px; }
+  .act .a-ico { font-size:20px; }
+  /* dpad and actions sit lower — account for home bar */
+  #dpad    { bottom:calc(env(safe-area-inset-bottom,0px) + 8px); left:calc(env(safe-area-inset-left,0px) + 8px); }
+  #actions { bottom:calc(env(safe-area-inset-bottom,0px) + 8px); right:calc(env(safe-area-inset-right,0px) + 8px); }
+  /* build panel above controls */
+  #build-panel { bottom:calc(env(safe-area-inset-bottom,0px) + 126px); }
+  /* HUD compact — no labels */
+  .stat .s-lbl { display:none !important; }
+  .stat { padding:3px 7px; }
+  /* objectives hidden in landscape */
+  #objectives { display:none !important; }
+  /* minimap moves to avoid overlap */
+  #minimap { bottom:auto; top:36px; left:calc(env(safe-area-inset-left,0px) + 6px); }
+}
 
 /* ══════════════════════════════════════
    TOAST — top area so it NEVER blocks gameplay
@@ -294,20 +462,26 @@ canvas{position:absolute;top:0;left:0;display:block;}
    LANDSCAPE MEDIA QUERY
 ══════════════════════════════════════ */
 @media(orientation:landscape) and (max-height:500px){
-  /* dpad bigger, moved down */
-  #dpad{bottom:8px;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px 56px;gap:4px;}
-  /* actions bigger */
-  #actions{bottom:8px;grid-template-columns:60px 60px;grid-template-rows:60px 60px;}
-  /* build panel at bottom, wider */
-  #build-panel{bottom:4px;}
-  /* HUD smaller on landscape */
-  .stat .s-lbl{display:none;}
-  /* objectives hidden in landscape (too cluttered) */
+  /* dpad bigger, moved to bottom-left */
+  #dpad{bottom:6px !important;left:6px !important;
+    grid-template-columns:54px 54px 54px !important;
+    grid-template-rows:54px 54px 54px !important;gap:4px !important;}
+  /* actions 2x2 bottom-right */
+  #actions{bottom:6px !important;right:6px !important;
+    grid-template-columns:58px 58px !important;
+    grid-template-rows:58px 58px !important;gap:5px !important;}
+  /* build panel centered above bottom edge */
+  #build-panel{bottom:6px !important;left:50% !important;transform:translateX(-50%) !important;}
+  /* HUD compact on landscape — hide labels */
+  .stat .s-lbl{display:none !important;}
+  /* objectives hidden — no space */
   #objectives{display:none !important;}
-  /* minimap top-left */
-  #minimap{top:36px;left:6px;bottom:auto;}
+  /* minimap above dpad */
+  #minimap{bottom:180px !important;left:6px !important;}
   /* wave timer smaller */
-  #wave-timer{font-size:clamp(36px,8vw,60px);}
+  #wave-timer{font-size:clamp(36px,8vw,60px) !important;}
+  /* more game canvas visible */
+  #stage-badge{top:36px !important;}
 }
 /* stage, levelup screens */
 #stage-screen{position:absolute;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(0,0,18,.97),#000);}
@@ -355,9 +529,11 @@ canvas{position:absolute;top:0;left:0;display:block;}
 </style>
 </head>
 <body>
+<div id="wrap">
 <canvas id="c-bg"></canvas>
 <canvas id="c-game"></canvas>
 <canvas id="c-ui"></canvas>
+</div>
 
 <!-- INTRO -->
 <div class="screen" id="s-intro">
@@ -373,16 +549,111 @@ canvas{position:absolute;top:0;left:0;display:block;}
       <div class="mode-btn" onclick="startGame('campaign')"><span class="m-ico">🚀</span><div class="m-title">קמפיין</div><div class="m-desc">7 שלבים עם סיפור</div></div>
       <div class="mode-btn" onclick="startGame('free')"><span class="m-ico">🌌</span><div class="m-title">חופשי</div><div class="m-desc">שחק ללא הגבלה</div></div>
     </div>
+    <!-- Old ctrl-grid (mobile) -->
     <div class="ctrl-grid">
-      <div class="ctrl"><b>חצים / D-Pad</b> — תנועה</div>
-      <div class="ctrl"><b>Z / 🔨</b> — בנה</div>
-      <div class="ctrl"><b>X / ⚡</b> — אסוף</div>
-      <div class="ctrl"><b>C / 🛡️</b> — מגן</div>
-      <div class="ctrl"><b>V / 🔆</b> — קרן לייזר</div>
-      <div class="ctrl"><b>B / ⚡</b> — ברק סביבתי</div>
+      <div class="ctrl"><b>חצים</b> — תנועה וקפיצה</div>
+      <div class="ctrl"><b>Z</b> — בנה מבנה</div>
+      <div class="ctrl"><b>X</b> — אסוף גבישים</div>
+      <div class="ctrl"><b>C</b> — הפעל מגן</div>
+      <div class="ctrl"><b>V</b> — קרן לייזר</div>
+      <div class="ctrl"><b>B</b> — ברק סביבתי</div>
     </div>
+
+    <!-- Full keyboard legend (desktop only) -->
+    <div class="legend">
+      <div class="legend-title">⌨️ מקרא מקשים</div>
+
+      <div class="legend-section">
+        <div class="legend-section-title">🕹️ תנועה</div>
+        <div class="legend-row">
+          <span class="kbd arrow">◀</span>
+          <span class="legend-or">או</span>
+          <span class="kbd">A</span>
+          <span class="legend-ico">⬅️</span>
+          <span class="legend-desc"><b>זוז שמאלה</b></span>
+        </div>
+        <div class="legend-row">
+          <span class="kbd arrow">▶</span>
+          <span class="legend-or">או</span>
+          <span class="kbd">D</span>
+          <span class="legend-ico">➡️</span>
+          <span class="legend-desc"><b>זוז ימינה</b></span>
+        </div>
+        <div class="legend-row">
+          <span class="kbd arrow">▲</span>
+          <span class="legend-or">או</span>
+          <span class="kbd wide">SPACE</span>
+          <span class="legend-ico">🦘</span>
+          <span class="legend-desc"><b>קפוץ</b> — לחץ שוב באוויר לג'טפק</span>
+        </div>
+      </div>
+
+      <div class="legend-section">
+        <div class="legend-section-title">⚡ פעולות לחימה</div>
+        <div class="legend-row">
+          <span class="kbd">X</span>
+          <span class="legend-ico">💎</span>
+          <span class="legend-desc"><b>אסוף גבישים</b> — אנרגיה חינם, קרוב אליך</span>
+        </div>
+        <div class="legend-row">
+          <span class="kbd">V</span>
+          <span class="legend-ico">🔆</span>
+          <span class="legend-desc"><b>קרן לייזר</b> — יורה למעלה, מפיל מטאורים — 8⚡</span>
+        </div>
+        <div class="legend-row">
+          <span class="kbd">C</span>
+          <span class="legend-ico">🛡️</span>
+          <span class="legend-desc"><b>מגן אנרגיה</b> — מקפיץ מטאורים — 5⚡</span>
+        </div>
+        <div class="legend-row">
+          <span class="kbd">B</span>
+          <span class="legend-ico">⚡</span>
+          <span class="legend-desc"><b>ברק סביבתי</b> — פוגע בכל המטאורים בטווח — 10⚡</span>
+        </div>
+      </div>
+
+      <div class="legend-section">
+        <div class="legend-section-title">🏗️ בנייה</div>
+        <div class="legend-row">
+          <span class="kbd">Z</span>
+          <span class="legend-ico">🔨</span>
+          <span class="legend-desc"><b>בנה מבנה</b> — בונה את הסוג הנבחר במיקום הנוכחי</span>
+        </div>
+        <div class="legend-row">
+          <span class="kbd">Q</span>
+          <span class="legend-ico">🔄</span>
+          <span class="legend-desc"><b>החלף סוג</b> — מחזר בין: 🏠 בית / 🗼 מגדל / 🔬 מעבדה / ⛩️ מקדש</span>
+        </div>
+        <div class="legend-row">
+          <span class="kbd">🖱️</span>
+          <span class="legend-ico">🏠</span>
+          <span class="legend-desc"><b>לחץ על מבנה</b> — שדרג / תקן / מכור</span>
+        </div>
+      </div>
+
+      <div class="legend-section">
+        <div class="legend-section-title">⚙️ מערכת</div>
+        <div class="legend-row">
+          <span class="kbd wide">ESC</span>
+          <span class="legend-or">או</span>
+          <span class="kbd">P</span>
+          <span class="legend-ico">⏸️</span>
+          <span class="legend-desc"><b>השהה</b> / המשך / חזור לתפריט</span>
+        </div>
+      </div>
+
+      <div style="background:rgba(0,245,255,.05);border:1px solid rgba(0,245,255,.12);border-radius:10px;padding:8px 12px;margin-top:4px;">
+        <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:rgba(255,215,0,.7);margin-bottom:6px;">💡 טיפ מהיר</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.55);line-height:1.7;text-align:right;">
+          אסוף גבישים מהר אחד אחרי השני לקומבו ✕12<br>
+          לחץ על מבנה שנפגע לתיקון מהיר<br>
+          בלילה מטאורים מהירים יותר — שמור אנרגיה למגן
+        </div>
+      </div>
+    </div>
+
     <div id="lb-intro"></div>
-    <div class="small-note">✈️ עובד במצב טיסה</div>
+    <div class="small-note">✈️ עובד במצב טיסה — ללא אינטרנט</div>
   </div>
 </div>
 
@@ -497,28 +768,35 @@ canvas{position:absolute;top:0;left:0;display:block;}
 <div id="objectives" style="display:none;"><div class="obj-hdr">יעדי שלב</div><div id="obj-list"></div></div>
 <div id="daymeter" style="display:none;"><div id="day-track"><div id="day-fill"></div></div><div id="day-lbl">☀️</div></div>
 <div id="minimap" style="display:none;"><canvas id="c-mini" width="86" height="46"></canvas></div>
+<div id="kb-hint" style="display:none;position:fixed;bottom:8px;left:50%;transform:translateX(-50%);z-index:10;font-family:Orbitron,monospace;font-size:7px;color:rgba(255,255,255,.22);letter-spacing:1px;white-space:nowrap;pointer-events:none;background:rgba(0,0,0,.3);padding:3px 10px;border-radius:10px;">
+  חצים=תנועה &nbsp;|&nbsp; Z=בנה &nbsp;|&nbsp; X=אסוף &nbsp;|&nbsp; C=מגן &nbsp;|&nbsp; V=קרן &nbsp;|&nbsp; B=ברק &nbsp;|&nbsp; Q=החלף &nbsp;|&nbsp; ESC=השהה
+</div>
 <div id="xp-wrap" style="display:none;"><div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div><div class="xp-lbl">XP <span id="xp-c">0</span>/<span id="xp-m">100</span> — רמה <span id="xp-l">1</span></div></div>
 <div id="wave-timer"></div>
 
+<!-- D-PAD: ergonomic cross — UP top, then LEFT + BUILD + RIGHT -->
 <div id="dpad" style="display:none;">
-  <div></div>
-  <div class="dp" id="dp-up" aria-label="למעלה"></div>
-  <div></div>
-  <div class="dp" id="dp-left" aria-label="שמאלה"></div>
-  <div class="dp" id="dp-center" style="font-size:18px;">🔨</div>
-  <div class="dp" id="dp-right" aria-label="ימינה"></div>
-  <div></div>
-  <div class="dp" id="dp-down" aria-label="למטה"></div>
-  <div></div>
+  <!-- Row 1: JUMP button, aligned above LEFT arrow -->
+  <div class="dp-row">
+    <div class="dp" id="dp-up"></div>
+  </div>
+  <!-- Row 2: movement + build -->
+  <div class="dp-row">
+    <div class="dp" id="dp-left"></div>
+    <div class="dp" id="dp-center"></div>
+    <div class="dp" id="dp-right"></div>
+  </div>
 </div>
 <div id="actions" style="display:none;">
-  <div class="act" id="btn-collect"><div class="a-ico">💎</div><div class="a-lbl">אסוף</div><div class="a-cost">חינם</div></div>
-  <div class="act beam" id="btn-beam"><div class="a-ico">🔆</div><div class="a-lbl">קרן</div><div class="a-cost">8⚡</div></div>
-  <div class="act shield" id="btn-shield"><div class="a-ico">🛡️</div><div class="a-lbl">מגן</div><div class="a-cost">5⚡</div></div>
-  <div class="act lightning-btn" id="btn-lightning"><div class="a-ico">⚡</div><div class="a-lbl">ברק</div><div class="a-cost">10⚡</div></div>
+  <div class="act" id="btn-collect" title="אסוף [X]"><div class="a-ico">💎</div><div class="a-lbl">אסוף</div><div class="a-cost">חינם</div></div>
+  <div class="act beam" id="btn-beam" title="קרן לייזר [V]"><div class="a-ico">🔆</div><div class="a-lbl">קרן</div><div class="a-cost">8⚡</div></div>
+  <div class="act build-btn" id="btn-build" title="בנה מבנה [Z]"><div class="a-ico">🏗️</div><div class="a-lbl">בנה</div><div class="a-cost">[Z]</div></div>
+  <div class="act shield" id="btn-shield" title="מגן [C]"><div class="a-ico">🛡️</div><div class="a-lbl">מגן</div><div class="a-cost">5⚡</div></div>
+  <div class="act lightning-btn" id="btn-lightning" title="ברק [B]"><div class="a-ico">⚡</div><div class="a-lbl">ברק</div><div class="a-cost">10⚡</div></div>
+  <div class="act cycle-btn" id="btn-cycle" title="החלף סוג בניין [Q]"><div class="a-ico" id="cycle-ico">🏠</div><div class="a-lbl">סוג</div><div class="a-cost">[Q]</div></div>
 </div>
 <div id="build-panel" style="display:none;">
-  <div class="build-lbl">בנה:</div>
+  <div class="build-lbl" id="build-lbl">בנה:</div>
   <div class="bi sel" data-i="0"><div class="b-ico">🏠</div><div class="b-cost">15⚡</div></div>
   <div class="bi" data-i="1"><div class="b-ico">🗼</div><div class="b-cost">30⚡</div></div>
   <div class="bi" data-i="2"><div class="b-ico">🔬</div><div class="b-cost">50⚡</div></div>
@@ -542,10 +820,16 @@ const WORLD_W_MULT=3; // world is 3x screen width
 let camX=0; // camera offset
 
 function resize(){
-  W=window.innerWidth;H=window.innerHeight;
+  // Use visualViewport for accurate size on iPhone with address bar
+  W = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  H = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   cBg.width=cGame.width=cUi.width=W;
   cBg.height=cGame.height=cUi.height=H;
   GY=H*0.73; buildTerrain();
+}
+// visualViewport resize for mobile browser chrome
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', resize);
 }
 window.addEventListener('resize',resize);
 
@@ -607,8 +891,8 @@ function initBg(){
   const ww=WORLD_W();
   STARS=[];for(let i=0;i<350;i++)STARS.push({x:rnd(0,ww),y:rnd(0,H*.78),r:rnd(.2,1.8),b:Math.random(),phase:rnd(0,6.28),spd:rnd(.005,.018)});
   NEBULAS=[];const cols=['#1a0a4a','#0a1a3a','#0a3a1a','#3a0a1a','#0a2a3a'];
-  for(let i=0;i<8;i++)NEBULAS.push({x:rnd(ww*.05,ww*.95),y:rnd(H*.05,H*.55),rx:rnd(80,200),ry:rnd(40,100),col:cols[i%5],a:rnd(.06,.12)});
-  bgClouds=[];for(let i=0;i<6;i++)bgClouds.push({x:rnd(0,ww),y:rnd(H*.06,H*.22),r:rnd(45,90)});
+  for(let i=0;i<5;i++)NEBULAS.push({x:rnd(ww*.05,ww*.95),y:rnd(H*.05,H*.45),rx:rnd(60,130),ry:rnd(25,65),col:cols[i%5],a:rnd(.04,.08)});
+  bgClouds=[];for(let i=0;i<5;i++)bgClouds.push({x:rnd(0,ww),y:rnd(H*.05,H*.2),r:rnd(28,55)});
 }
 function worldToScreen(wx){return wx-camX;}
 function screenToWorld(sx){return sx+camX;}
@@ -626,7 +910,8 @@ function drawBg(){
   NEBULAS.forEach(n=>{
     const sx=n.x-camX*.2;if(sx<-n.rx*2||sx>W+n.rx*2)return;
     const g=xBg.createRadialGradient(sx,n.y,0,sx,n.y,n.rx);
-    g.addColorStop(0,n.col+'aa');g.addColorStop(1,'transparent');
+    // max alpha 0x44 = very subtle
+    g.addColorStop(0,n.col+'44');g.addColorStop(0.6,n.col+'18');g.addColorStop(1,'transparent');
     xBg.fillStyle=g;xBg.beginPath();xBg.ellipse(sx,n.y,n.rx,n.ry,0,0,Math.PI*2);xBg.fill();
   });
   // stars (parallax at 15%)
@@ -656,7 +941,7 @@ function drawBg(){
   // clouds (parallax 40%)
   bgClouds.forEach(cl=>{
     const sx=cl.x-camX*.4;const modx=((sx%W)+W)%W-cl.r;
-    xBg.fillStyle=`rgba(255,255,255,${.1+night*.04})`;
+    xBg.fillStyle=`rgba(255,255,255,${.05+night*.02})`;
     xBg.beginPath();xBg.arc(modx,cl.y,cl.r,0,Math.PI*2);xBg.arc(modx+cl.r*.7,cl.y-cl.r*.28,cl.r*.68,0,Math.PI*2);xBg.arc(modx-cl.r*.55,cl.y-cl.r*.18,cl.r*.58,0,Math.PI*2);xBg.fill();
   });
   // ground (parallax 100% — world coordinates)
@@ -847,19 +1132,61 @@ function startGame(mode){
   document.getElementById('s-intro').classList.add('off');
   showGameUI(true);resetAll();
 }
+// Touch detection — true for phones, tablets, iPad, etc.
+// Use CSS media query (pointer:fine = real mouse only) as primary signal
+const hasFinePointer = window.matchMedia('(pointer:fine)').matches;
+const hasTouchPoints = navigator.maxTouchPoints > 0;
+// Show controls if: has touch points OR no fine pointer (i.e. touch/stylus screen)
+const SHOW_TOUCH_CONTROLS = hasTouchPoints || !hasFinePointer;
+
 function showGameUI(show){
-  ['hud','dpad','actions','build-panel','xp-wrap','minimap','daymeter','stage-badge','objectives'].forEach(id=>{
+  // Always show these
+  ['hud','xp-wrap','minimap','daymeter','stage-badge','objectives'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
-    if(id==='actions')el.style.display=show?'grid':'none';
-    else el.style.display=show?'':'none';
+    el.style.display=show?'':'none';
   });
+
+  // Touch controls — show on any device with touch (phone, tablet, iPad)
+  const dpad=document.getElementById('dpad');
+  const actions=document.getElementById('actions');
+  const bpanel=document.getElementById('build-panel');
+  const kbhint=document.getElementById('kb-hint');
+
+  if(!show){
+    if(dpad)    dpad.style.display='none';
+    if(actions) actions.style.display='none';
+    if(bpanel)  bpanel.style.display='none';
+    if(kbhint)  kbhint.style.display='none';
+    return;
+  }
+
+  // Build panel always visible
+  if(bpanel) bpanel.style.display='flex';
+
+  // Action buttons + build panel: ALWAYS visible (touch AND desktop)
+  if(actions) actions.style.display='grid';
+  if(bpanel)  bpanel.style.display='flex';
+
+  // D-Pad: only on touch devices (keyboard handles movement on desktop)
+  if(SHOW_TOUCH_CONTROLS){
+    if(dpad){
+      dpad.style.display='flex';
+      dpad.style.flexDirection='column';
+      dpad.style.alignItems='flex-start';
+      dpad.style.gap='6px';
+    }
+    if(kbhint) kbhint.style.display='none';
+  } else {
+    if(dpad)   dpad.style.display='none';
+    if(kbhint) kbhint.style.display='block';
+  }
 }
 function resetAll(){
   G={running:true,paused:false,over:false,energy:20,hp:100,maxHp:100,homes:0,pop:0,score:0,level:1,xp:0,xpNext:100,time:0,dayPhase:0,passiveT:0,regenT:0,shieldOn:false,shieldT:0,beamOn:false,beamT:0,lightningT:0,combo:0,comboT:0,lastCollect:0,weatherEv:null,meteorRate:.004,up:{doubleE:false,fastBuild:false,superShield:false,autoCollect:false,companion:false,magnet:false,jetpack:false,bossKiller:false,regen:false},_totalE:0,_waveT:0,_bossKills:0,_bossMode:false,_waveMode:false,_bossSpawnT:999,_crystalMult:1,_quaking:false,_windfall:false,_powerDown:false,_eventT:0};
   const ww=WORLD_W()||W*3;
   P={wx:ww/2,y:GY-40,vy:0,onGround:true,dir:1,anim:0,animT:0,invT:0,hit:false,jetOn:false};
   crystals=[];buildings=[];meteors=[];particles=[];craters=[];companion=null;lightningBolts=[];
-  buildIdx=0;stageIdx=0;stageActive=false;camX=0;shakeX=shakeY=shakeTimer=0;
+  buildIdx=0;stageIdx=0;stageActive=false;setTimeout(updateCycleBtn,100);camX=0;shakeX=shakeY=shakeTimer=0;
   _bldPopupTarget=null;_shopOpen=false;_specialEventActive=null;_specialEventTimer=0;
   document.getElementById('bld-popup').style.display='none';
   document.getElementById('special-event').style.display='none';
@@ -1050,6 +1377,10 @@ function updateHUD(){
     else wt.style.display='none';
   } else wt.style.display='none';
 }
+function updateCycleBtn(){
+  const el=document.getElementById('cycle-ico');
+  if(el) el.textContent=BUILD_DATA[buildIdx].emoji;
+}
 function updateBuildPanel(){
   document.querySelectorAll('.bi').forEach((el,i)=>{
     el.classList.toggle('sel',i===buildIdx);
@@ -1057,6 +1388,7 @@ function updateBuildPanel(){
     let dot=el.querySelector('.b-dot');if(!dot){dot=document.createElement('div');dot.className='b-dot';el.appendChild(dot);}
     dot.style.background=G.energy>=cost?'#00ff88':'#ff4444';
   });
+  updateCycleBtn();
 }
 
 // ── MINIMAP ──────────────────────────────────────────────────────────
@@ -1311,37 +1643,83 @@ cGame.addEventListener('click',e=>{
   closeBldPopup();
 });
 
-// d-pad
-['dp-up','dp-left','dp-right','dp-down'].forEach(id=>{
-  const dir=id.split('-')[1],el=document.getElementById(id);
-  const on=()=>{touch[dir]=true;el.classList.add('held');};const off=()=>{touch[dir]=false;el.classList.remove('held');};
-  el.addEventListener('touchstart',e=>{e.preventDefault();on();},{passive:false});el.addEventListener('touchend',e=>{e.preventDefault();off();},{passive:false});
-  el.addEventListener('mousedown',on);el.addEventListener('mouseup',off);el.addEventListener('mouseleave',off);
-});
-document.getElementById('dp-center').addEventListener('click',doBuild);
-document.getElementById('btn-collect').addEventListener('click',doCollect);
-document.getElementById('btn-shield').addEventListener('click',doShield);
-document.getElementById('btn-beam').addEventListener('click',doBeam);
-document.getElementById('btn-lightning').addEventListener('click',doLightning);
-document.querySelectorAll('.bi').forEach(el=>{el.addEventListener('click',()=>{buildIdx=parseInt(el.dataset.i);updateBuildPanel();toast('🏗️ '+BUILD_DATA[buildIdx].name);sfxUI();});});
+// ══════════════════════════════════════════════════
+// MULTI-TOUCH INPUT SYSTEM
+// Uses PointerEvents — works for touch+mouse simultaneously
+// Each button gets its own listeners with setPointerCapture
+// ══════════════════════════════════════════════════
 
-let tx0=0,ty0=0;
-cGame.addEventListener('touchstart',e=>{tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;if(ty0<H*.35)touch.up=true;},{passive:true});
-cGame.addEventListener('touchend',e=>{
-  touch.up=false;touch.left=false;touch.right=false;
-  const dx=e.changedTouches[0].clientX-tx0;
-  if(Math.abs(dx)>38&&Math.abs(dx)>Math.abs(e.changedTouches[0].clientY-ty0)){buildIdx=(buildIdx+(dx<0?1:-1)+BUILD_DATA.length)%BUILD_DATA.length;updateBuildPanel();}
-},{passive:true});
-cGame.addEventListener('touchmove',e=>{
-  if(e.touches.length>0){
-    const x=e.touches[0].clientX,y=e.touches[0].clientY;
-    // only register movement swipes in center area (not over buttons)
-    const overDpad=x<180&&y>H-240;
-    const overActions=x>W-140&&y>H-240;
-    if(!overDpad&&!overActions){
-      touch.left=x<W*.4&&y>H*.3&&y<H*.85;
-      touch.right=x>W*.6&&y>H*.3&&y<H*.85;
+function setupBtn(id, onDown, onUp){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    el.classList.add('held');
+    if(onDown) onDown();
+  }, {passive:false});
+  el.addEventListener('pointerup', e=>{
+    el.classList.remove('held');
+    if(onUp) onUp();
+  });
+  el.addEventListener('pointercancel', e=>{
+    el.classList.remove('held');
+    if(onUp) onUp();
+  });
+  el.addEventListener('pointerleave', e=>{
+    // only release if pointer actually left while captured
+    if(!el.hasPointerCapture(e.pointerId)){
+      el.classList.remove('held');
+      if(onUp) onUp();
     }
+  });
+}
+
+// D-PAD — hold to move
+setupBtn('dp-left',  ()=>touch.left=true,  ()=>touch.left=false);
+setupBtn('dp-right', ()=>touch.right=true, ()=>touch.right=false);
+setupBtn('dp-up',    ()=>touch.up=true,    ()=>touch.up=false);
+// dp-down removed — up arrow handles jump
+
+// D-PAD CENTER = build
+setupBtn('dp-center', ()=>doBuild(), null);
+
+// ACTION BUTTONS — tap to activate
+setupBtn('btn-collect',   ()=>doCollect(),   null);
+setupBtn('btn-beam',      ()=>doBeam(),      null);
+setupBtn('btn-shield',    ()=>doShield(),    null);
+setupBtn('btn-lightning', ()=>doLightning(), null);
+setupBtn('btn-build',     ()=>doBuild(),     null);
+setupBtn('btn-cycle',     ()=>{
+  buildIdx=(buildIdx+1)%BUILD_DATA.length;
+  updateBuildPanel();
+  updateCycleBtn();
+  toast('🏗️ '+BUILD_DATA[buildIdx].name);
+  sfxUI();
+}, null);
+
+// BUILD PANEL — tap to select
+document.querySelectorAll('.bi').forEach(el=>{
+  el.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    buildIdx=parseInt(el.dataset.i);
+    updateBuildPanel();
+    toast('🏗️ '+BUILD_DATA[buildIdx].name);
+    sfxUI();
+  },{passive:false});
+});
+
+// Canvas swipe = change build type
+let tx0=0, ty0=0;
+cGame.addEventListener('touchstart', e=>{
+  if(e.touches.length===1){tx0=e.touches[0].clientX; ty0=e.touches[0].clientY;}
+},{passive:true});
+cGame.addEventListener('touchend', e=>{
+  const dx=e.changedTouches[0].clientX-tx0;
+  const dy=e.changedTouches[0].clientY-ty0;
+  if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy) && Math.abs(dy)<30){
+    buildIdx=(buildIdx+(dx<0?1:-1)+BUILD_DATA.length)%BUILD_DATA.length;
+    updateBuildPanel();
   }
 },{passive:true});
 
