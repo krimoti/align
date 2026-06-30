@@ -6,10 +6,34 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>🪐 Planet Genesis 5.0</title>
+<title>🪐 Planet Genesis 5.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+*{
+  margin:0;padding:0;box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* Global long-press / selection / callout killer.
+   iOS Safari shows the Copy/Look Up/Translate bubble on ANY element
+   that allows text selection during a long-press, even with
+   touch-action set. This must be applied broadly, not just to .dp/.act. */
+html, body{
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+button, .dp, .act, .bi, .mode-btn, .lu-opt, .shop-item, .bp-btn, canvas{
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  user-select:none;
+}
+/* Exception: text inputs must remain selectable/editable */
+input, textarea{
+  -webkit-user-select:text;
+  user-select:text;
+  -webkit-touch-callout:default;
+}
 
 /* ═══════════════════════════════════════════════════════════
    ROOT — fluid design tokens. Everything scales from these.
@@ -43,6 +67,16 @@
   /* Control zone height — reserved space at bottom that the
      game viewport content must never render text/important UI into. */
   --control-zone-h: calc(var(--btn-size) * 2 + var(--btn-gap) * 3 + var(--sab) + 8px);
+
+  /* Build panel sits ABOVE the control zone as its own fixed strip.
+     Its height must be added to the total reserved footprint so the
+     player sprite never renders underneath it (this was the bug —
+     GY only accounted for control-zone-h, not build-panel height). */
+  --build-panel-h: clamp(46px, 9vmin, 64px);
+
+  /* Total vertical space permanently reserved at the bottom of the
+     screen for ALL fixed UI (controls + build panel + small gap). */
+  --total-bottom-reserved: calc(var(--control-zone-h) + var(--build-panel-h) + clamp(4px,1vmin,8px));
 }
 
 html,body{
@@ -283,8 +317,9 @@ canvas{
   align-items:flex-start;
   gap:var(--btn-gap);
   pointer-events:all;
+  direction:ltr; /* critical: prevents RTL from reversing dp-left/dp-right order */
 }
-.dp-row{display:flex;flex-direction:row;gap:var(--btn-gap);align-items:center;}
+.dp-row{display:flex;flex-direction:row;gap:var(--btn-gap);align-items:center;direction:ltr;}
 
 .dp{
   width:var(--btn-size);height:var(--btn-size);
@@ -307,6 +342,14 @@ canvas{
 #dp-right::after{content:'▶';font-size:clamp(18px,4vmin,28px);color:rgba(255,255,255,.9);}
 #dp-up,#dp-left,#dp-right{direction:ltr!important;unicode-bidi:bidi-override;}
 
+/* Belt-and-suspenders: explicit flex `order` guarantees visual position
+   independent of direction/dir-attribute quirks in any browser/webview.
+   order is part of the flexbox spec itself and is always respected
+   regardless of how direction:ltr is or isn't honored on the container. */
+#dp-left  { order:1; }
+#dp-center{ order:2; }
+#dp-right { order:3; }
+
 #dp-center{
   width:calc(var(--btn-size) * 0.82);height:calc(var(--btn-size) * 0.82);
   border-color:rgba(0,255,136,.35);background:rgba(0,30,15,.8);
@@ -325,6 +368,7 @@ canvas{
   grid-template-rows:repeat(2, var(--btn-size-sm));
   gap:var(--btn-gap);
   pointer-events:all;
+  direction:ltr; /* keep button order stable regardless of page RTL */
 }
 .act{
   border-radius:var(--radius-md);
@@ -907,10 +951,20 @@ let camX=0; // camera offset
 // Reads the live --control-zone-h CSS value (which itself is computed
 // from --btn-size, --btn-gap, safe-area-inset-bottom). This keeps JS
 // and CSS perfectly in sync — change a CSS token, gameplay adapts.
+// Reads --total-bottom-reserved (control zone + build panel + gap),
+// NOT just --control-zone-h, because the build panel is a separate
+// fixed strip sitting above the D-pad/actions row. Both must be
+// excluded from the playable area or the character renders underneath
+// the building selector (this was the reported bug).
 function getControlZoneHeight(){
-  const v = getComputedStyle(document.documentElement).getPropertyValue('--control-zone-h');
+  const cs = getComputedStyle(document.documentElement);
+  const v = cs.getPropertyValue('--total-bottom-reserved');
   const px = parseFloat(v);
-  return isNaN(px) ? 140 : px;
+  if (!isNaN(px)) return px;
+  // Fallback: sum the two tokens manually if shorthand didn't resolve
+  const czh = parseFloat(cs.getPropertyValue('--control-zone-h')) || 0;
+  const bph = parseFloat(cs.getPropertyValue('--build-panel-h')) || 0;
+  return czh + bph + 8 || 180;
 }
 
 function resize(){
@@ -921,15 +975,30 @@ function resize(){
   cBg.width=cGame.width=cUi.width=W;
   cBg.height=cGame.height=cUi.height=H;
 
-  // Ground level (GY) is computed so the playable strip never sits
-  // underneath the reserved control-zone band, even on short/landscape
-  // screens. We keep at least 18% of height above ground for sky/HUD,
-  // and never let ground dip into the control zone.
+  // Ground level (GY) is computed so the FULL standing player sprite
+  // (body + name tag above head) never overlaps the reserved bottom UI
+  // band (control zone + build panel). Previously only the ground LINE
+  // was kept clear, but the sprite stands ~70-90px tall above it —
+  // that extra height must also be subtracted, or the character visually
+  // sits behind/under the building selector strip on short screens.
   const reserved = getControlZoneHeight();
-  const maxGY = H - reserved - 24; // 24px buffer above controls
+  const spriteClearance = 90; // approx sprite height + name tag, in px
+  const maxGY = H - reserved - spriteClearance;
   const idealGY = H * 0.73;
-  GY = Math.min(idealGY, maxGY);
-  GY = Math.max(GY, H * 0.45); // never push ground above screen midpoint
+  const minGY = H * 0.40; // soft floor: don't push ground above 40% of height
+
+  // SAFETY FIRST: maxGY (clearing the controls) always wins, even if it
+  // means going below the 40% floor on very short landscape screens.
+  // A previous version let the floor override the ceiling, which could
+  // push the ground line back down INTO the control band on short
+  // viewports — exactly the bug being fixed here.
+  if (maxGY < minGY) {
+    // Extremely cramped viewport: prioritize clearing controls completely.
+    GY = Math.max(maxGY, H * 0.25); // absolute minimum sky margin
+  } else {
+    GY = Math.min(idealGY, maxGY);
+    GY = Math.max(GY, minGY);
+  }
 
   buildTerrain();
 }
@@ -947,6 +1016,15 @@ window.addEventListener('orientationchange', ()=>setTimeout(resize, 100));
 // Blocks pinch-zoom, double-tap-zoom, and page rubber-band scrolling
 // so the game never loses focus to browser chrome gestures.
 document.addEventListener('gesturestart', e => e.preventDefault());
+
+// Block the native long-press context menu / selection callout entirely.
+// This is the #1 cause of "looks like a website" popups during gameplay.
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('selectstart', e => {
+  // Allow text selection inside the name input field only
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  e.preventDefault();
+});
 document.addEventListener('gesturechange', e => e.preventDefault());
 document.addEventListener('gestureend', e => e.preventDefault());
 
