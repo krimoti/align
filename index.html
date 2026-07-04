@@ -90,6 +90,9 @@ html, body {
   background: #000;
   font-family: 'Inter', sans-serif;
   overscroll-behavior: none;
+  touch-action: pan-y; /* let vertical scroll reach overlay screens below;
+                           canvas/dpad/actions still set touch-action:none
+                           explicitly, so gameplay itself is unaffected */
 }
 
 /* Rotate hint — shown in portrait, hides everything else */
@@ -122,6 +125,8 @@ html, body {
   position: fixed; inset: 0;
   width:  100dvw;
   height: 100dvh;
+  touch-action: pan-y; /* let scroll reach .screen overlays; canvas/controls
+                           still override with their own touch-action:none */
 }
 
 /* ── Canvas layer ── */
