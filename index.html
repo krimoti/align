@@ -43,9 +43,17 @@ input, textarea {
      10vmin at 375px tall = 37.5px → clamps to 44px min
      10vmin at 393px tall = 39.3px → 44px min
      Keeps buttons touchable without eating vertical space.  */
-  --btn:    clamp(44px, 10vmin, 58px);
-  --btn-sm: clamp(36px,  9vmin, 50px);
+  --btn:    clamp(48px, 11vmin, 64px);
+  --btn-sm: clamp(40px, 10vmin, 55px);
   --gap:    clamp(3px,  0.8vmin, 6px);
+
+  /* ── Computed real widths of the D-pad and action-grid clusters ──
+     D-pad's widest row is [◀][🔨][▶]: two full --btn + one 0.78×--btn + 2 gaps.
+     Actions is a 3-column grid of --btn-sm with 2 gaps.
+     Kept in sync automatically so the build panel (center) never overlaps
+     either cluster, even if the button sizes above are changed later. */
+  --dpad-w: calc(var(--btn) * 2.78 + var(--gap) * 2);
+  --act-w:  calc(var(--btn-sm) * 3 + var(--gap) * 2);
 
   /* ── Bottom strip: SINGLE height band containing D-pad + build + actions ──
      D-pad has 2 rows (▲ on top, ◀🔨▶ on bottom). Strip height = dpad height.
@@ -422,7 +430,7 @@ canvas {
   backdrop-filter: blur(8px);
   pointer-events: all;
   /* Max width: must fit between D-pad and actions with margin */
-  max-width: calc(100vw - var(--dpad-w, 200px) - var(--act-w, 180px) - 32px);
+  max-width: calc(100vw - var(--dpad-w) - var(--act-w) - 32px);
   /* Ensure it stays within the strip height */
   max-height: var(--strip-h);
 }
@@ -951,19 +959,13 @@ function resize(){
   H=window.visualViewport?window.visualViewport.height:window.innerHeight;
   cBg.width=cGame.width=cUi.width=W;
   cBg.height=cGame.height=cUi.height=H;
-  const reserved = getReservedH();
-  // In landscape, controls are now ONE strip (not stacked 2 layers).
-  // Sprite clearance reduced: character ~40px tall at landscape scale.
-  // Target: ground = 1/3 of screen height, sky = 2/3.
-  const spriteClear = 50;
-  const maxGY = H - reserved - spriteClear; // ground must be tall enough for bottom UI + character clearance
-  const idealGY = H * (2/3);  // 2/3 sky / 1/3 ground is the design target
-  const minGY   = H * 0.5;    // safety ceiling: ground never exceeds 50% even on tiny screens
-  if (maxGY < minGY) {
-    GY = maxGY; // very short viewport: fall back to whatever room the reserved UI allows
-  } else {
-    GY = clamp(idealGY, minGY, maxGY);
-  }
+  // Target: ground = exactly 1/3 of screen height, sky = 2/3.
+  // (Bottom controls float over the ground visually; they no longer force
+  // the ground band to grow past 1/3 — only an extreme, near-unusable
+  // viewport height would ever hit the hard floor below.)
+  const idealGY = H * (2/3);
+  const minAbsGroundH = H * 0.22; // hard floor: ground never below 22% of height
+  GY = Math.min(idealGY, H - minAbsGroundH);
   buildTerrain();
 }
 if(window.visualViewport){
