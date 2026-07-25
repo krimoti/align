@@ -7,9 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>🪐 Planet Genesis 6.0</title>
-<!-- No external network dependencies: fully offline / airplane-mode safe.
-     Orbitron/Inter fallbacks (monospace/sans-serif) are used instead of
-     Google Fonts, since every font-family rule below already includes them. -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 /* ════════════════════════════════════════════════════════════
    RESET — block EVERY browser default that makes this feel
@@ -30,6 +28,18 @@ input, textarea {
   touch-action: auto;
 }
 
+/* Scrollable modals/overlays need touch-action re-enabled on every
+   descendant, not just the container — a touch that starts on a child
+   button/text element still uses THAT element's own touch-action (which
+   the reset above set to none), regardless of what the ancestor allows. */
+.screen, .screen *,
+#s-char, #s-char *,
+#levelup, #levelup *,
+#stage-screen, #stage-screen *,
+#shop-screen, #shop-screen * {
+  touch-action: pan-y;
+}
+
 /* ════════════════════════════════════════════════════════════
    ROOT — all sizing tokens. vmin-based so landscape & portrait
    both compute correctly. 1vmin = shorter viewport dimension / 100.
@@ -45,17 +55,9 @@ input, textarea {
      10vmin at 375px tall = 37.5px → clamps to 44px min
      10vmin at 393px tall = 39.3px → 44px min
      Keeps buttons touchable without eating vertical space.  */
-  --btn:    clamp(48px, 11vmin, 64px);
-  --btn-sm: clamp(40px, 10vmin, 55px);
+  --btn:    clamp(44px, 10vmin, 58px);
+  --btn-sm: clamp(36px,  9vmin, 50px);
   --gap:    clamp(3px,  0.8vmin, 6px);
-
-  /* ── Computed real widths of the D-pad and action-grid clusters ──
-     D-pad's widest row is [◀][🔨][▶]: two full --btn + one 0.78×--btn + 2 gaps.
-     Actions is a 3-column grid of --btn-sm with 2 gaps.
-     Kept in sync automatically so the build panel (center) never overlaps
-     either cluster, even if the button sizes above are changed later. */
-  --dpad-w: calc(var(--btn) * 2.78 + var(--gap) * 2);
-  --act-w:  calc(var(--btn-sm) * 3 + var(--gap) * 2);
 
   /* ── Bottom strip: SINGLE height band containing D-pad + build + actions ──
      D-pad has 2 rows (▲ on top, ◀🔨▶ on bottom). Strip height = dpad height.
@@ -92,9 +94,6 @@ html, body {
   background: #000;
   font-family: 'Inter', sans-serif;
   overscroll-behavior: none;
-  touch-action: pan-y; /* let vertical scroll reach overlay screens below;
-                           canvas/dpad/actions still set touch-action:none
-                           explicitly, so gameplay itself is unaffected */
 }
 
 /* Rotate hint — shown in portrait, hides everything else */
@@ -127,8 +126,6 @@ html, body {
   position: fixed; inset: 0;
   width:  100dvw;
   height: 100dvh;
-  touch-action: pan-y; /* let scroll reach .screen overlays; canvas/controls
-                           still override with their own touch-action:none */
 }
 
 /* ── Canvas layer ── */
@@ -266,17 +263,26 @@ canvas {
 }
 
 #combo {
-  position:fixed; top:calc(var(--sat) + clamp(28px,5.5vmin,38px));
-  right:calc(var(--sar) + 6px); z-index:11;
-  text-align:center; pointer-events:none; transition:opacity .3s; opacity:0;
+  position:fixed;
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  z-index:18; text-align:center;
+  pointer-events:none; opacity:0; transition:opacity .25s;
 }
 #combo .c-x {
   font-family:'Orbitron',monospace; font-weight:900;
-  font-size:clamp(18px,4.5vmin,32px);
-  background:linear-gradient(135deg,var(--gold),var(--orange));
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1;
+  font-size:clamp(36px,9vmin,72px); line-height:1; color:#ffd700;
+  text-shadow:0 0 30px rgba(255,215,0,.8),0 0 60px rgba(255,150,0,.4);
+  -webkit-text-stroke:2px rgba(255,200,0,.3);
+  animation:comboPop .2s ease-out;
 }
-#combo .c-lbl { font-family:'Orbitron',monospace; font-size:calc(var(--hud-fs)*.58); color:var(--gold); letter-spacing:.2em; }
+@keyframes comboPop{0%{transform:scale(.5)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+#combo .c-lbl{font-family:'Orbitron',monospace;font-size:clamp(10px,2.2vmin,16px);letter-spacing:.25em;margin-top:4px;color:var(--gold);text-shadow:0 0 10px rgba(255,215,0,.6);}
+#combo.c2 .c-x{color:#ffee44;text-shadow:0 0 20px rgba(255,220,0,.7);}
+#combo.c4 .c-x{color:#ff9900;text-shadow:0 0 25px rgba(255,150,0,.8);}
+#combo.c6 .c-x{color:#ff4422;text-shadow:0 0 30px rgba(255,60,0,.9);}
+#combo.c8 .c-x{color:#ff00ff;text-shadow:0 0 35px rgba(255,0,255,.9),0 0 70px rgba(200,0,200,.4);}
+#combo.c10 .c-x{color:#00ffff;text-shadow:0 0 40px rgba(0,255,255,1),0 0 80px rgba(0,200,255,.5);}
+#combo-flash{position:fixed;inset:0;z-index:17;pointer-events:none;opacity:0;transition:opacity .15s;}
 
 #toast {
   position:fixed; top:38%; left:50%; transform:translate(-50%,-50%);
@@ -437,7 +443,7 @@ canvas {
   backdrop-filter: blur(8px);
   pointer-events: all;
   /* Max width: must fit between D-pad and actions with margin */
-  max-width: calc(100vw - var(--dpad-w) - var(--act-w) - 32px);
+  max-width: calc(100vw - var(--dpad-w, 200px) - var(--act-w, 180px) - 32px);
   /* Ensure it stays within the strip height */
   max-height: var(--strip-h);
 }
@@ -471,8 +477,7 @@ canvas {
   display:flex; align-items:center; justify-content:center;
   background:radial-gradient(ellipse at 50% 40%,rgba(2,2,22,.97),#000);
   padding: var(--sat) var(--sar) var(--sab) var(--sal);
-  overflow-y:auto;
-  touch-action: pan-y;
+  overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch;
   direction: rtl; /* restore RTL for text content inside screens */
 }
 .screen.off { display:none; }
@@ -481,8 +486,7 @@ canvas {
   padding: clamp(14px,3vmin,24px) clamp(12px,2.8vmin,22px);
   background:rgba(3,3,28,.98); border:1px solid var(--border);
   border-radius:var(--radius); text-align:center;
-  max-height:94dvh; overflow-y:auto;
-  touch-action: pan-y;
+  max-height:94dvh; overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch;
   direction: rtl;
 }
 .logo {
@@ -567,12 +571,53 @@ canvas {
 #music-hud-btn:hover { opacity:1; }
 #music-hud-btn.off   { opacity:.28; }
 
+/* ── Voice command toggle (intro) ── */
+#voice-toggle {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(255,95,191,.06); border:1px solid rgba(255,95,191,.25);
+  border-radius:clamp(10px,2.5vmin,18px);
+  padding:clamp(6px,1.4vmin,9px) clamp(12px,3vmin,18px);
+  cursor:pointer; transition:all .15s;
+  font-family:'Orbitron',monospace; font-size:clamp(9px,2vmin,12px);
+  color:rgba(255,255,255,.75); letter-spacing:.1em;
+}
+#voice-toggle:hover { background:rgba(255,95,191,.12); border-color:rgba(255,95,191,.5); }
+#voice-toggle .vt-ico { font-size:clamp(16px,3.5vmin,22px); }
+#voice-toggle.off { opacity:.45; }
+#voice-toggle.unsupported { display:none; }
+
+/* In-game voice indicator (top HUD) */
+#voice-hud-btn {
+  font-size:clamp(13px,2.8vmin,18px);
+  cursor:pointer; pointer-events:all;
+  padding:0 clamp(4px,1vmin,7px);
+  opacity:.65; transition:opacity .2s,transform .15s;
+  display:none;
+}
+#voice-hud-btn:hover { opacity:1; }
+#voice-hud-btn.off   { opacity:.28; }
+#voice-hud-btn.listening { animation:voicePulse 1.1s ease-in-out infinite; }
+@keyframes voicePulse {
+  0%,100% { transform:scale(1); filter:drop-shadow(0 0 0 rgba(255,95,191,0)); }
+  50%     { transform:scale(1.18); filter:drop-shadow(0 0 6px rgba(255,95,191,.9)); }
+}
+/* Brief caption showing the last recognized voice command */
+#voice-caption {
+  position:fixed; left:50%; top:calc(var(--sat) + 40px); transform:translateX(-50%);
+  z-index:70; pointer-events:none;
+  font-family:'Orbitron',monospace; font-size:clamp(10px,2.2vmin,14px);
+  color:#ff9fe0; background:rgba(20,0,20,.55); border:1px solid rgba(255,95,191,.4);
+  border-radius:10px; padding:4px 12px; letter-spacing:.05em;
+  opacity:0; transition:opacity .25s;
+}
+#voice-caption.show { opacity:1; }
+
 /* Stage screen */
 #stage-screen {
   position:fixed; inset:0; z-index:40; display:none;
   align-items:center; justify-content:center;
   background:radial-gradient(ellipse at center,rgba(0,0,18,.97),#000);
-  overflow-y:auto; touch-action: pan-y; direction:rtl;
+  overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch; direction:rtl;
 }
 #stage-screen.show { display:flex; }
 .st-card {
@@ -580,7 +625,7 @@ canvas {
   padding:clamp(14px,3vmin,24px) clamp(12px,2.8vmin,20px);
   background:rgba(3,3,25,.98); border:1px solid rgba(0,245,255,.26);
   border-radius:var(--radius); text-align:center;
-  max-height:94dvh; overflow-y:auto; touch-action: pan-y; direction:rtl;
+  max-height:94dvh; overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch; direction:rtl;
 }
 .st-eyebrow { font-family:'Orbitron',monospace; font-size:calc(var(--hud-fs)*.7); letter-spacing:.3em; color:var(--blue); opacity:.6; margin-bottom:4px; }
 .st-num { font-family:'Orbitron',monospace; font-weight:900; line-height:1; font-size:clamp(40px,10vmin,68px); background:linear-gradient(135deg,var(--blue),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:2px; }
@@ -597,10 +642,10 @@ canvas {
 #shop-screen {
   position:fixed; inset:0; z-index:42; display:none;
   align-items:center; justify-content:center;
-  background:rgba(0,0,15,.88); backdrop-filter:blur(6px); overflow-y:auto; touch-action: pan-y; direction:rtl;
+  background:rgba(0,0,15,.88); backdrop-filter:blur(6px); overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch; direction:rtl;
 }
 #shop-screen.show { display:flex; }
-.shop-card { max-width:min(390px,90vw); width:100%; background:rgba(4,4,32,.98); border:1px solid var(--gold); border-radius:var(--radius); padding:clamp(14px,3vmin,20px); max-height:94dvh; overflow-y:auto; touch-action: pan-y; }
+.shop-card { max-width:min(390px,90vw); width:100%; background:rgba(4,4,32,.98); border:1px solid var(--gold); border-radius:var(--radius); padding:clamp(14px,3vmin,20px); max-height:94dvh; overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
 .shop-title { font-family:'Orbitron',monospace; font-weight:900; text-align:center; font-size:clamp(15px,3.5vmin,19px); background:linear-gradient(135deg,var(--gold),var(--orange)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:3px; }
 .shop-sub   { font-size:clamp(8px,1.8vmin,10px); color:rgba(255,255,255,.4); text-align:center; font-family:'Orbitron',monospace; letter-spacing:.1em; margin-bottom:12px; }
 .shop-item  { display:flex; align-items:center; gap:10px; background:rgba(30,25,5,.5); border:1px solid rgba(255,215,0,.2); border-radius:var(--radius); padding:clamp(8px,1.9vmin,11px) clamp(9px,2.2vmin,13px); margin:6px 0; cursor:pointer; transition:all .14s; }
@@ -626,9 +671,9 @@ canvas {
 .bp-close { font-size:calc(var(--hud-fs)*.68); color:rgba(255,255,255,.3); text-align:center; cursor:pointer; margin-top:5px; font-family:'Orbitron',monospace; }
 
 /* Level up */
-#levelup { position:fixed; inset:0; z-index:35; display:none; align-items:center; justify-content:center; background:rgba(0,0,20,.72); backdrop-filter:blur(4px); overflow-y:auto; touch-action: pan-y; direction:rtl; }
+#levelup { position:fixed; inset:0; z-index:35; display:none; align-items:center; justify-content:center; background:rgba(0,0,20,.72); backdrop-filter:blur(4px); overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch; direction:rtl; }
 #levelup.show { display:flex; }
-.lu-card { max-width:min(330px,90vw); width:100%; background:rgba(5,3,35,.97); border:1px solid var(--purple); border-radius:var(--radius); padding:clamp(14px,3vmin,20px); max-height:94dvh; overflow-y:auto; touch-action: pan-y; }
+.lu-card { max-width:min(330px,90vw); width:100%; background:rgba(5,3,35,.97); border:1px solid var(--purple); border-radius:var(--radius); padding:clamp(14px,3vmin,20px); max-height:94dvh; overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
 .lu-title { font-family:'Orbitron',monospace; font-weight:900; text-align:center; font-size:clamp(15px,3.5vmin,19px); background:linear-gradient(135deg,var(--purple),var(--blue)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:2px; }
 .lu-sub { font-size:clamp(9px,1.9vmin,11px); color:rgba(255,255,255,.4); text-align:center; margin-bottom:11px; font-family:'Orbitron',monospace; letter-spacing:.1em; }
 .lu-opt { display:flex; gap:9px; align-items:center; background:rgba(25,20,70,.55); border:1px solid rgba(191,95,255,.26); border-radius:var(--radius); padding:clamp(9px,2vmin,11px) clamp(10px,2.3vmin,13px); cursor:pointer; margin:5px 0; transition:all .13s; width:100%; }
@@ -675,56 +720,206 @@ canvas {
 .legend-or{font-size:8px;color:rgba(255,255,255,.22);flex-shrink:0;}
 .legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;}
 @media(pointer:fine){.ctrl-grid{display:none;}}
+/* ═══════════════════════════════════════════════════════════
+   SPLASH SCREEN
+═══════════════════════════════════════════════════════════ */
+#s-splash {
+  position:fixed; inset:0; z-index:200;
+  background:radial-gradient(ellipse at 50% 40%, #050520, #000);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:clamp(8px,2vmin,16px);
+}
+#s-splash.off { display:none; }
+.splash-orb {
+  width:clamp(60px,14vmin,100px); height:clamp(60px,14vmin,100px);
+  border-radius:50%;
+  background:radial-gradient(circle at 33% 33%, #1eff78, #0a8a40, #041a0c);
+  box-shadow:0 0 6vmin rgba(0,255,100,.5), 0 0 12vmin rgba(0,255,100,.2);
+  animation:splashPulse 1.8s ease-in-out infinite alternate;
+}
+@keyframes splashPulse {
+  from { box-shadow:0 0 4vmin rgba(0,255,100,.4), 0 0 8vmin rgba(0,255,100,.1); transform:scale(1); }
+  to   { box-shadow:0 0 8vmin rgba(0,255,100,.7), 0 0 16vmin rgba(0,255,100,.3); transform:scale(1.04); }
+}
+.splash-title {
+  font-family:'Orbitron',monospace; font-weight:900;
+  font-size:clamp(28px,7vmin,56px); text-align:center; line-height:1.1;
+  background:linear-gradient(135deg,#00f5ff,#bf5fff,#ffd700);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  letter-spacing:.12em;
+}
+.splash-sub {
+  font-family:'Orbitron',monospace; font-size:clamp(8px,1.6vmin,11px);
+  color:rgba(0,245,255,.5); letter-spacing:.3em;
+}
+.splash-bar-wrap {
+  width:clamp(160px,30vw,260px); height:6px;
+  background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden;
+  margin-top:clamp(8px,2vmin,14px);
+}
+.splash-bar {
+  height:100%; width:0%; border-radius:3px;
+  background:linear-gradient(90deg,#00f5ff,#bf5fff,#ffd700);
+  transition:width .1s linear;
+}
+.splash-hint {
+  font-family:'Orbitron',monospace; font-size:clamp(7px,1.4vmin,10px);
+  color:rgba(255,255,255,.22); letter-spacing:.1em; margin-top:4px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CHARACTER-PICK SPLASH (brief zoom-in on confirm)
+═══════════════════════════════════════════════════════════ */
+#char-splash {
+  position:fixed; inset:0; z-index:210;
+  background:radial-gradient(ellipse at 50% 45%, #0a0a2e, #000);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:clamp(10px,2.5vmin,18px);
+  opacity:0; pointer-events:none; transition:opacity .25s ease;
+}
+#char-splash.show { opacity:1; pointer-events:all; }
+.cs-emoji {
+  font-size:clamp(50px,14vmin,110px);
+  animation:csPop .55s cubic-bezier(.2,1.4,.4,1) both;
+  filter:drop-shadow(0 0 4vmin currentColor);
+}
+@keyframes csPop {
+  0%   { transform:scale(.15); opacity:0; }
+  55%  { transform:scale(1.18); opacity:1; }
+  100% { transform:scale(1); opacity:1; }
+}
+.cs-name {
+  font-family:'Orbitron',monospace; font-weight:900;
+  font-size:clamp(16px,4vmin,28px); letter-spacing:.1em; text-align:center;
+  color:#fff; text-shadow:0 0 20px rgba(0,245,255,.6);
+  animation:csFadeUp .45s ease .15s both;
+}
+.cs-class {
+  font-family:'Orbitron',monospace; font-size:clamp(9px,2vmin,13px);
+  letter-spacing:.25em; color:rgba(0,245,255,.75);
+  animation:csFadeUp .45s ease .25s both;
+}
+@keyframes csFadeUp {
+  from { transform:translateY(10px); opacity:0; }
+  to   { transform:translateY(0); opacity:1; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LANGUAGE TOGGLE
+═══════════════════════════════════════════════════════════ */
+#lang-toggle {
+  position:fixed; top:calc(var(--sat) + 6px); left:8px; z-index:60;
+  background:rgba(0,6,26,.82); border:1px solid var(--border);
+  border-radius:clamp(8px,2vmin,14px);
+  padding:clamp(3px,.7vmin,5px) clamp(8px,1.8vmin,12px);
+  font-family:'Orbitron',monospace; font-size:clamp(8px,1.6vmin,11px);
+  color:rgba(255,255,255,.7); cursor:pointer; letter-spacing:.1em;
+  backdrop-filter:blur(8px); transition:all .15s;
+  pointer-events:all;
+}
+#lang-toggle:hover { border-color:var(--blue); color:#fff; }
+
+/* ═══════════════════════════════════════════════════════════
+   CHARACTER SELECTION SCREEN
+═══════════════════════════════════════════════════════════ */
+#s-char {
+  position:fixed; inset:0; z-index:55;
+  display:none; align-items:center; justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,rgba(2,2,22,.97),#000);
+  padding:var(--sat) var(--sar) var(--sab) var(--sal);
+  overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch;
+}
+#s-char.show { display:flex; }
+
+.char-card {
+  max-width:min(700px,96vw); width:100%;
+  background:rgba(3,3,28,.98); border:1px solid var(--border);
+  border-radius:var(--radius); padding:clamp(14px,3vmin,22px);
+  text-align:center;
+  max-height:94dvh; overflow-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch;
+  margin:auto 0; /* auto-centers when it fits, degrades to scrollable top-start when it doesn't */
+}
+.char-title {
+  font-family:'Orbitron',monospace; font-weight:900;
+  font-size:clamp(16px,3.8vmin,26px); letter-spacing:.12em;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  margin-bottom:clamp(10px,2.4vmin,18px);
+}
+.char-grid {
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:clamp(6px,1.4vmin,12px);
+  margin-bottom:clamp(12px,2.8vmin,20px);
+  direction:ltr;
+}
+.char-btn {
+  background:rgba(0,10,40,.6);
+  border:2px solid rgba(0,245,255,.2);
+  border-radius:var(--radius); padding:clamp(8px,1.8vmin,14px) clamp(4px,1vmin,8px);
+  cursor:pointer; transition:all .15s; position:relative;
+  display:flex; flex-direction:column; align-items:center; gap:clamp(3px,.7vmin,6px);
+}
+.char-btn:hover { background:rgba(0,40,120,.5); border-color:rgba(0,245,255,.5); transform:scale(1.04); }
+.char-btn.selected {
+  background:rgba(0,60,180,.4); border-color:var(--blue);
+  box-shadow:0 0 clamp(10px,2.5vmin,20px) rgba(0,245,255,.35);
+  transform:scale(1.06);
+}
+.char-btn .ch-emoji { font-size:clamp(28px,6vmin,44px); line-height:1; }
+.char-btn .ch-name  { font-family:'Orbitron',monospace; font-size:clamp(7px,1.4vmin,10px); font-weight:700; color:#fff; letter-spacing:.05em; }
+.char-btn .ch-class { font-size:clamp(6px,1.2vmin,9px); color:var(--blue); letter-spacing:.05em; }
+.char-btn .ch-badge { position:absolute; top:-6px; right:-6px; background:var(--gold); color:#000; border-radius:50%; width:clamp(16px,3vmin,22px); height:clamp(16px,3vmin,22px); display:none; align-items:center; justify-content:center; font-size:clamp(9px,1.8vmin,13px); font-weight:900; }
+.char-btn.selected .ch-badge { display:flex; }
+
+/* Stats bar under selected character */
+.char-stats {
+  background:rgba(0,6,26,.7); border:1px solid rgba(0,245,255,.15);
+  border-radius:var(--radius); padding:clamp(10px,2.2vmin,16px);
+  margin-bottom:clamp(10px,2.2vmin,16px); text-align:right;
+  min-height:clamp(80px,18vmin,120px);
+  display:flex; align-items:center; gap:clamp(12px,3vmin,20px);
+}
+.char-big-emoji { font-size:clamp(40px,9vmin,64px); flex-shrink:0; filter:drop-shadow(0 0 8px rgba(0,245,255,.4)); }
+.char-info { flex:1; }
+.char-info-name { font-family:'Orbitron',monospace; font-size:clamp(13px,3vmin,20px); font-weight:900; color:#fff; margin-bottom:4px; }
+.char-info-desc { font-size:clamp(9px,1.9vmin,12px); color:rgba(255,255,255,.6); line-height:1.5; margin-bottom:8px; }
+.stat-bars { display:grid; grid-template-columns:auto 1fr; gap:clamp(3px,.7vmin,5px) clamp(6px,1.4vmin,10px); align-items:center; }
+.stat-bar-label { font-family:'Orbitron',monospace; font-size:clamp(7px,1.4vmin,9px); color:rgba(255,255,255,.5); white-space:nowrap; text-align:right; }
+.stat-bar-track { height:clamp(5px,1.1vmin,8px); background:rgba(255,255,255,.08); border-radius:4px; overflow:hidden; min-width:clamp(60px,12vw,120px); }
+.stat-bar-fill  { height:100%; border-radius:4px; transition:width .4s ease; }
+
+.char-bonus-tag {
+  display:inline-block; background:rgba(255,215,0,.15); border:1px solid rgba(255,215,0,.4);
+  border-radius:6px; padding:2px 8px; font-family:'Orbitron',monospace;
+  font-size:clamp(7px,1.4vmin,9px); color:var(--gold); letter-spacing:.05em; margin:2px;
+}
+
 </style>
 </head>
-<!-- ══════ Universal offline-cache registration + on-screen verification ══════
-     Paste this EXACT block, unedited, right before </body> in every index.html
-     on the domain. Nothing here needs per-repo changes. -->
-<div id="offline-badge" style="
-  position:fixed; bottom:8px; left:8px; z-index:99999;
-  font:11px/1.4 -apple-system,sans-serif; padding:5px 9px; border-radius:7px;
-  background:rgba(0,0,0,.78); color:#fff; direction:rtl; pointer-events:none;
-  opacity:0; transition:opacity .3s;"></div>
-<script>
-(function(){
-  const badge = document.getElementById('offline-badge');
-  function show(text, color){
-    badge.textContent = text;
-    badge.style.color = color;
-    badge.style.opacity = '1';
-    setTimeout(()=>{ badge.style.opacity = '0'; }, 6000);
-  }
-  if(!('serviceWorker' in navigator)){
-    show('⚠️ הדפדפן הזה לא תומך ב-Service Worker', '#ff6b6b');
-    return;
-  }
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      if(navigator.serviceWorker.controller){
-        // This load was actually served/controlled by the SW → offline-ready NOW.
-        show('✅ מוכן לאופליין (מוגש מהמטמון)', '#3ecf8e');
-      } else {
-        // First-ever visit: installing now, but THIS load came from the network,
-        // not the cache. Reload once (still online) before trusting airplane mode.
-        show('⏳ טוען לראשונה — רענן פעם אחת עוד עם אינטרנט', '#f5a623');
-      }
-      reg.addEventListener('updatefound', () => {
-        console.log('[offline] new version of sw.js found, scope:', reg.scope);
-      });
-    }).catch(err => {
-      show('❌ רישום נכשל: ' + err.message, '#ff6b6b');
-    });
-  });
-})();
-</script>  
-
 <body>
 
 <!-- ══ ROTATE HINT (portrait mode only) ══ -->
 <div id="rotate-hint">
   <div class="ri-ico">📱</div>
-  <div class="ri-txt">סובב את הטלפון</div>
-  <div class="ri-sub">המשחק עובד במצב אופקי בלבד</div>
+  <div class="ri-txt" id="rotate-txt">סובב את הטלפון</div>
+  <div class="ri-sub" id="rotate-sub">המשחק עובד במצב אופקי בלבד</div>
+</div>
+
+<!-- ══ SPLASH SCREEN ══ -->
+<div id="s-splash">
+  <div class="splash-orb"></div>
+  <div class="splash-title">PLANET<br>GENESIS</div>
+  <div class="splash-sub" id="splash-sub">LOADING UNIVERSE...</div>
+  <div class="splash-bar-wrap"><div class="splash-bar" id="splash-bar"></div></div>
+  <div class="splash-hint" id="splash-hint">✈️ OFFLINE READY</div>
+</div>
+
+<!-- ══ CHARACTER-PICK SPLASH (brief zoom before mode select) ══ -->
+<div id="char-splash">
+  <div class="cs-emoji" id="cs-emoji">👽</div>
+  <div class="cs-name" id="cs-name">חייזר קלאסי</div>
+  <div class="cs-class" id="cs-class">מאוזן</div>
 </div>
 
 <!-- ══ GAME ROOT (landscape only) ══ -->
@@ -737,6 +932,27 @@ canvas {
     <canvas id="c-ui"></canvas>
   </div>
 
+  <!-- Language toggle (always visible) -->
+  <div id="lang-toggle" onclick="toggleLang()">🌐 EN</div>
+
+  <!-- Character selection screen -->
+  <div id="s-char">
+    <div class="char-card">
+      <div class="char-title" id="char-title">בחר את הדמות שלך</div>
+      <div class="char-grid" id="char-grid"></div>
+      <div class="char-stats" id="char-stats">
+        <div class="char-big-emoji" id="char-big">👽</div>
+        <div class="char-info">
+          <div class="char-info-name" id="char-info-name">בחר דמות</div>
+          <div class="char-info-desc" id="char-info-desc">לחץ על דמות לפרטים</div>
+          <div class="stat-bars" id="char-stat-bars"></div>
+          <div id="char-bonus-tags" style="margin-top:6px;"></div>
+        </div>
+      </div>
+      <button class="btn-pri" id="char-start-btn" onclick="confirmCharacter()" style="width:100%;">▶ התחל משחק</button>
+    </div>
+  </div>
+
   <!-- Screens -->
   <div class="screen" id="s-intro">
     <div class="card">
@@ -747,61 +963,80 @@ canvas {
         <div class="name-lbl">שם:</div>
         <input class="name-input" id="player-name" placeholder="חייזר-1" maxlength="12">
       </div>
+      <div id="change-char-chip" onclick="showCharSelect()" style="display:flex;align-items:center;gap:8px;background:rgba(0,245,255,.08);border:1px solid rgba(0,245,255,.3);border-radius:clamp(10px,2.5vmin,18px);padding:clamp(6px,1.4vmin,9px) clamp(12px,3vmin,18px);cursor:pointer;margin-bottom:8px;width:fit-content;">
+        <span id="change-char-emoji" style="font-size:clamp(18px,4vmin,24px);">👽</span>
+        <span id="change-char-name" style="font-family:'Orbitron',monospace;font-size:clamp(9px,2vmin,12px);color:rgba(255,255,255,.75);letter-spacing:.05em;">חייזר קלאסי</span>
+        <span style="font-size:clamp(11px,2.4vmin,14px);color:rgba(0,245,255,.8);">🔄</span>
+      </div>
       <div class="mode-row">
         <div class="mode-btn" onclick="startGame('campaign')"><span class="m-ico">🚀</span><div class="m-title">קמפיין</div><div class="m-desc">7 שלבים עם סיפור</div></div>
         <div class="mode-btn" onclick="startGame('free')"><span class="m-ico">🌌</span><div class="m-title">חופשי</div><div class="m-desc">שחק ללא הגבלה</div></div>
       </div>
       <div class="ctrl-grid">
-        <div class="ctrl"><b>חצים</b> — תנועה</div>
-        <div class="ctrl"><b>Z</b> — בנה מבנה</div>
-        <div class="ctrl"><b>X</b> — אסוף גבישים</div>
-        <div class="ctrl"><b>C</b> — מגן</div>
-        <div class="ctrl"><b>V</b> — קרן לייזר</div>
-        <div class="ctrl"><b>B</b> — ברק</div>
+        <div class="ctrl"><b id="cg-arrows-l">חצים</b> — <span id="cg-arrows-d">תנועה</span></div>
+        <div class="ctrl"><b>Z</b> — <span id="cg-build-d">בנה מבנה</span></div>
+        <div class="ctrl"><b>X</b> — <span id="cg-collect-d">אסוף גבישים</span></div>
+        <div class="ctrl"><b>C</b> — <span id="cg-shield-d">מגן</span></div>
+        <div class="ctrl"><b>V</b> — <span id="cg-beam-d">קרן לייזר</span></div>
+        <div class="ctrl"><b>B</b> — <span id="cg-lightning-d">ברק</span></div>
       </div>
       <div class="legend">
-        <div class="legend-title">⌨️ מקרא מקשים</div>
+        <div class="legend-title" id="legend-title">⌨️ מקרא מקשים</div>
         <div class="legend-section">
-          <div class="legend-section-title">🕹️ תנועה</div>
-          <div class="legend-row"><span class="kbd">◀</span><span class="legend-or">או</span><span class="kbd">A</span><span class="legend-ico">⬅️</span><span class="legend-desc"><b>שמאלה</b></span></div>
-          <div class="legend-row"><span class="kbd">▶</span><span class="legend-or">או</span><span class="kbd">D</span><span class="legend-ico">➡️</span><span class="legend-desc"><b>ימינה</b></span></div>
-          <div class="legend-row"><span class="kbd">▲</span><span class="legend-or">או</span><span class="kbd wide">SPACE</span><span class="legend-ico">🦘</span><span class="legend-desc"><b>קפוץ</b> — שוב באוויר לג'טפק</span></div>
+          <div class="legend-section-title" id="lg-sec-move">🕹️ תנועה</div>
+          <div class="legend-row"><span class="kbd">◀</span><span class="legend-or">או</span><span class="kbd">A</span><span class="legend-ico">⬅️</span><span class="legend-desc"><b id="lg-left">שמאלה</b></span></div>
+          <div class="legend-row"><span class="kbd">▶</span><span class="legend-or">או</span><span class="kbd">D</span><span class="legend-ico">➡️</span><span class="legend-desc"><b id="lg-right">ימינה</b></span></div>
+          <div class="legend-row"><span class="kbd">▲</span><span class="legend-or">או</span><span class="kbd wide">SPACE</span><span class="legend-ico">🦘</span><span class="legend-desc"><b id="lg-jump">קפוץ</b> <span id="lg-jump-d">— שוב באוויר לג'טפק</span></span></div>
         </div>
         <div class="legend-section">
-          <div class="legend-section-title">⚡ פעולות</div>
-          <div class="legend-row"><span class="kbd">X</span><span class="legend-ico">💎</span><span class="legend-desc"><b>אסוף</b> — גבישי אנרגיה</span></div>
-          <div class="legend-row"><span class="kbd">V</span><span class="legend-ico">🔆</span><span class="legend-desc"><b>קרן לייזר</b> — 8⚡</span></div>
-          <div class="legend-row"><span class="kbd">C</span><span class="legend-ico">🛡️</span><span class="legend-desc"><b>מגן</b> — 5⚡</span></div>
-          <div class="legend-row"><span class="kbd">B</span><span class="legend-ico">⚡</span><span class="legend-desc"><b>ברק סביבתי</b> — 10⚡</span></div>
+          <div class="legend-section-title" id="lg-sec-actions">⚡ פעולות</div>
+          <div class="legend-row"><span class="kbd">X</span><span class="legend-ico">💎</span><span class="legend-desc"><b id="lg-collect">אסוף</b> <span id="lg-collect-d">— גבישי אנרגיה</span></span></div>
+          <div class="legend-row"><span class="kbd">V</span><span class="legend-ico">🔆</span><span class="legend-desc"><b id="lg-beam">קרן לייזר</b> <span id="lg-beam-c">— 8⚡</span></span></div>
+          <div class="legend-row"><span class="kbd">C</span><span class="legend-ico">🛡️</span><span class="legend-desc"><b id="lg-shield">מגן</b> <span id="lg-shield-c">— 5⚡</span></span></div>
+          <div class="legend-row"><span class="kbd">B</span><span class="legend-ico">⚡</span><span class="legend-desc"><b id="lg-lightning">ברק סביבתי</b> <span id="lg-lightning-c">— 10⚡</span></span></div>
         </div>
         <div class="legend-section">
-          <div class="legend-section-title">🏗️ בנייה</div>
-          <div class="legend-row"><span class="kbd">Z</span><span class="legend-ico">🔨</span><span class="legend-desc"><b>בנה</b> את הסוג הנבחר</span></div>
-          <div class="legend-row"><span class="kbd">Q</span><span class="legend-ico">🔄</span><span class="legend-desc"><b>החלף סוג</b> — 🏠🗼🔬⛩️</span></div>
+          <div class="legend-section-title" id="lg-sec-build">🏗️ בנייה</div>
+          <div class="legend-row"><span class="kbd">Z</span><span class="legend-ico">🔨</span><span class="legend-desc"><b id="lg-build">בנה</b> <span id="lg-build-d">את הסוג הנבחר</span></span></div>
+          <div class="legend-row"><span class="kbd">Q</span><span class="legend-ico">🔄</span><span class="legend-desc"><b id="lg-swap">החלף סוג</b> — 🏠🗼🔬⛩️</span></div>
         </div>
         <div class="legend-section">
-          <div class="legend-section-title">⚙️ מערכת</div>
-          <div class="legend-row"><span class="kbd wide">ESC</span><span class="legend-or">או</span><span class="kbd">P</span><span class="legend-ico">⏸️</span><span class="legend-desc"><b>השהה</b></span></div>
+          <div class="legend-section-title" id="lg-sec-system">⚙️ מערכת</div>
+          <div class="legend-row"><span class="kbd wide">ESC</span><span class="legend-or">או</span><span class="kbd">P</span><span class="legend-ico">⏸️</span><span class="legend-desc"><b id="lg-pause">השהה</b></span></div>
         </div>
       </div>
       <div id="lb-intro"></div>
-      <div style="margin-top:8px;">
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <div id="music-toggle" onclick="toggleMusic()">
           <span class="mt-ico">🎵</span>
           <span class="mt-lbl">מוזיקת רקע</span>
         </div>
+        <div id="music-style-btn" onclick="cycleMusicStyle()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,245,255,.08);border:1px solid rgba(0,245,255,.3);border-radius:clamp(10px,2.5vmin,18px);padding:clamp(6px,1.4vmin,9px) clamp(12px,3vmin,18px);cursor:pointer;font-family:'Orbitron',monospace;font-size:clamp(9px,2vmin,12px);color:rgba(255,255,255,.7);letter-spacing:.05em;">
+          <span id="music-cycle-ico" style="font-size:clamp(14px,3vmin,18px);">🔀</span>
+          <span id="music-style-lbl">🌌 חלל רגוע</span>
+        </div>
+        <div id="voice-toggle" onclick="toggleVoice()">
+          <span class="vt-ico">🎙️</span>
+          <span class="vt-lbl" id="voice-toggle-lbl">פקודות קול</span>
+        </div>
       </div>
-      <div class="small-note">✈️ עובד במצב טיסה · מצב אופקי בלבד</div>
+      <div style="margin-top:6px;">
+        <div id="coop-toggle" onclick="toggleCoop()" style="display:inline-flex;align-items:center;gap:8px;background:rgba(191,95,255,.08);border:1px solid rgba(191,95,255,.3);border-radius:clamp(10px,2.5vmin,18px);padding:clamp(6px,1.4vmin,9px) clamp(12px,3vmin,18px);cursor:pointer;font-family:'Orbitron',monospace;font-size:clamp(9px,2vmin,12px);color:rgba(255,255,255,.7);letter-spacing:.1em;">
+          <span style="font-size:clamp(16px,3.5vmin,22px);">👾</span>
+          <span id="coop-lbl">Co-op 2 שחקנים (כבוי)</span>
+        </div>
+      </div>
+      <div class="small-note" id="small-note">✈️ עובד במצב טיסה · מצב אופקי בלבד</div>
     </div>
   </div>
 
   <div id="stage-screen">
     <div class="st-card">
-      <div class="st-eyebrow">שלב</div>
+      <div class="st-eyebrow" id="st-eyebrow">שלב</div>
       <div class="st-num" id="st-num">1</div>
       <div class="st-title" id="st-title"></div>
       <p class="st-story" id="st-story"></p>
-      <div class="st-goals-box"><div class="st-goals-hdr">🎯 יעדי השלב</div><div id="st-goals"></div></div>
+      <div class="st-goals-box"><div class="st-goals-hdr" id="st-goals-hdr">🎯 יעדי השלב</div><div id="st-goals"></div></div>
       <div class="st-reward" id="st-reward"></div>
       <button class="btn-pri" onclick="beginStage()" id="st-btn">▶ יאללה!</button>
     </div>
@@ -809,16 +1044,16 @@ canvas {
 
   <div id="shop-screen">
     <div class="shop-card">
-      <div class="shop-title">🏪 חנות קוסמית</div>
+      <div class="shop-title" id="shop-title">🏪 חנות קוסמית</div>
       <div class="shop-sub" id="shop-sub">בחר פריט</div>
       <div id="shop-items"></div>
-      <button class="btn-sec" onclick="closeShop()" style="margin-top:8px;width:100%;">דלג →</button>
+      <button class="btn-sec" id="btn-shop-skip" onclick="closeShop()" style="margin-top:8px;width:100%;">דלג →</button>
     </div>
   </div>
 
   <div id="levelup">
     <div class="lu-card">
-      <div class="lu-title">⭐ LEVEL UP!</div>
+      <div class="lu-title" id="lu-title">⭐ LEVEL UP!</div>
       <div class="lu-sub" id="lu-sub">רמה 2</div>
       <div id="lu-choices"></div>
     </div>
@@ -826,40 +1061,41 @@ canvas {
 
   <div class="screen off" id="s-over">
     <div class="card">
-      <div class="over-title">☠️ GAME OVER</div>
+      <div class="over-title" id="over-title">☠️ GAME OVER</div>
       <div id="over-reason" style="font-size:calc(var(--hud-fs)*.85);color:rgba(255,255,255,.42);margin-bottom:10px;font-family:'Orbitron',monospace;letter-spacing:.1em;"></div>
       <div class="stats-grid">
-        <div class="sbox"><div class="sv" id="os-score">0</div><div class="sl">ניקוד</div></div>
-        <div class="sbox"><div class="sv" id="os-level">0</div><div class="sl">רמה</div></div>
-        <div class="sbox"><div class="sv" id="os-time">0</div><div class="sl">שניות</div></div>
+        <div class="sbox"><div class="sv" id="os-score">0</div><div class="sl" id="os-score-lbl">ניקוד</div></div>
+        <div class="sbox"><div class="sv" id="os-level">0</div><div class="sl" id="os-level-lbl">רמה</div></div>
+        <div class="sbox"><div class="sv" id="os-time">0</div><div class="sl" id="os-time-lbl">שניות</div></div>
       </div>
       <div id="lb-over"></div>
-      <button class="btn-pri" onclick="toIntro()" style="margin-top:10px;">🏠 תפריט ראשי</button><br>
-      <button class="btn-sec" onclick="startGame(window._lastMode||'campaign')" style="margin-top:6px;">🔄 שחק שוב</button>
+      <button class="btn-pri" id="btn-over-menu" onclick="toIntro()" style="margin-top:10px;">🏠 תפריט ראשי</button><br>
+      <button class="btn-sec" id="btn-over-restart" onclick="startGame(window._lastMode||'campaign')" style="margin-top:6px;">🔄 שחק שוב</button>
     </div>
   </div>
 
   <div class="screen off" id="s-victory">
     <div class="card">
       <div class="v-planet"></div>
-      <div class="victory-title">🌍 הכוכב חי!</div>
-      <p style="font-size:clamp(11px,2.3vmin,13px);color:rgba(255,255,255,.52);line-height:1.7;margin-bottom:10px;">השלמת את כל 7 השלבים!</p>
+      <div class="victory-title" id="vic-title">🌍 הכוכב חי!</div>
+      <p id="vic-desc" style="font-size:clamp(11px,2.3vmin,13px);color:rgba(255,255,255,.52);line-height:1.7;margin-bottom:10px;">השלמת את כל 7 השלבים!</p>
       <div class="stats-grid">
-        <div class="sbox"><div class="sv" id="vs-score">0</div><div class="sl">ניקוד</div></div>
-        <div class="sbox"><div class="sv" id="vs-pop">0</div><div class="sl">תושבים</div></div>
-        <div class="sbox"><div class="sv" id="vs-time">0</div><div class="sl">שניות</div></div>
+        <div class="sbox"><div class="sv" id="vs-score">0</div><div class="sl" id="vs-score-lbl">ניקוד</div></div>
+        <div class="sbox"><div class="sv" id="vs-pop">0</div><div class="sl" id="vs-pop-lbl">תושבים</div></div>
+        <div class="sbox"><div class="sv" id="vs-time">0</div><div class="sl" id="vs-time-lbl">שניות</div></div>
       </div>
       <div id="lb-victory"></div>
-      <button class="btn-pri" onclick="toIntro()">🏠 תפריט ראשי</button>
+      <button class="btn-pri" id="btn-vic-menu" onclick="toIntro()">🏠 תפריט ראשי</button>
     </div>
   </div>
 
   <div class="screen off" id="s-pause">
     <div class="card" style="max-width:min(280px,85vw);">
-      <div class="pause-title">⏸ PAUSED</div>
-      <button class="btn-pri" onclick="togglePause()" style="width:100%;">▶ המשך</button><br>
-      <button class="btn-sec" onclick="startGame(window._lastMode||'campaign')" style="margin-top:8px;width:100%;">🔄 התחל מחדש</button><br>
-      <button class="btn-sec" onclick="toIntro()" style="margin-top:4px;width:100%;border-color:rgba(255,100,100,.35);color:#ff9999;">🏠 תפריט ראשי</button>
+      <div class="pause-title" id="pause-title">⏸ PAUSED</div>
+      <button class="btn-pri" id="btn-resume" onclick="togglePause()" style="width:100%;">▶ המשך</button><br>
+      <button class="btn-sec" id="btn-pause-restart" onclick="startGame(window._lastMode||'campaign')" style="margin-top:8px;width:100%;">🔄 התחל מחדש</button><br>
+      <button class="btn-sec" onclick="cycleMusicStyle()" style="margin-top:4px;width:100%;"><span id="music-cycle-ico-pause">🔀</span> <span id="music-style-lbl-pause">🌌 חלל רגוע</span></button><br>
+      <button class="btn-sec" id="btn-pause-menu" onclick="toIntro()" style="margin-top:4px;width:100%;border-color:rgba(255,100,100,.35);color:#ff9999;">🏠 תפריט ראשי</button>
     </div>
   </div>
 
@@ -867,29 +1103,32 @@ canvas {
   <div id="hud" style="display:none;pointer-events:none;">
     <div class="hud-row">
       <div class="stat stat-btn" onclick="togglePause()" style="pointer-events:all;border-color:rgba(255,255,255,.14);"><span class="s-ico">⏸</span></div>
-      <div class="stat" id="stat-energy"><span class="s-ico">⚡</span><div><div class="s-val" id="h-e">0</div><div class="s-lbl">אנרגיה</div></div></div>
-      <div class="stat"><span class="s-ico">⭐</span><div><div class="s-val" id="h-score">0</div><div class="s-lbl">ניקוד</div></div></div>
-      <div class="stat"><span class="s-ico">👽</span><div><div class="s-val" id="h-pop">0</div><div class="s-lbl">תושבים</div></div></div>
-      <div class="stat"><span class="s-ico">🏠</span><div><div class="s-val" id="h-homes">0</div><div class="s-lbl">מבנים</div></div></div>
-      <div class="stat" id="stat-hp"><span class="s-ico">💗</span><div><div class="s-val" id="h-hp">100</div><div class="s-lbl">חיים</div></div></div>
-      <div class="stat"><span class="s-ico">🎯</span><div><div class="s-val" id="h-level">1</div><div class="s-lbl">רמה</div></div></div>
+      <div class="stat" id="stat-energy"><span class="s-ico">⚡</span><div><div class="s-val" id="h-e">0</div><div class="s-lbl" id="lbl-energy">אנרגיה</div></div></div>
+      <div class="stat"><span class="s-ico">⭐</span><div><div class="s-val" id="h-score">0</div><div class="s-lbl" id="lbl-score">ניקוד</div></div></div>
+      <div class="stat"><span class="s-ico">👽</span><div><div class="s-val" id="h-pop">0</div><div class="s-lbl" id="lbl-pop">תושבים</div></div></div>
+      <div class="stat"><span class="s-ico">🏠</span><div><div class="s-val" id="h-homes">0</div><div class="s-lbl" id="lbl-homes">מבנים</div></div></div>
+      <div class="stat" id="stat-hp"><span class="s-ico">💗</span><div><div class="s-val" id="h-hp">100</div><div class="s-lbl" id="lbl-hp">חיים</div></div></div>
+      <div class="stat"><span class="s-ico">🎯</span><div><div class="s-val" id="h-level">1</div><div class="s-lbl" id="lbl-level">רמה</div></div></div>
       <div id="music-hud-btn" onclick="toggleMusic()" title="מוזיקה">🎵</div>
+      <div id="voice-hud-btn" onclick="toggleVoice()" title="פקודות קול">🎙️</div>
     </div>
   </div>
+  <div id="voice-caption"></div>
 
-  <div id="stage-badge" style="display:none;">שלב <span id="badge-n">1</span> — <span id="badge-t"></span></div>
+  <div id="stage-badge" style="display:none;"><span id="badge-prefix">שלב</span> <span id="badge-n">1</span> — <span id="badge-t"></span></div>
   <div id="weather"></div>
   <div id="combo"><div class="c-x" id="combo-x">x2</div><div class="c-lbl">COMBO</div></div>
-  <div id="objectives" style="display:none;"><div class="obj-hdr">יעדי שלב</div><div id="obj-list"></div></div>
+  <div id="objectives" style="display:none;"><div class="obj-hdr" id="objectives-hdr">יעדי שלב</div><div id="obj-list"></div></div>
   <div id="daymeter" style="display:none;"><div id="day-track"><div id="day-fill"></div></div><div id="day-lbl">☀️</div></div>
   <div id="minimap" style="display:none;"><canvas id="c-mini" width="86" height="46"></canvas></div>
-  <div id="xp-wrap" style="display:none;"><div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div><div class="xp-lbl">XP <span id="xp-c">0</span>/<span id="xp-m">100</span> — רמה <span id="xp-l">1</span></div></div>
+  <div id="xp-wrap" style="display:none;"><div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div><div class="xp-lbl">XP <span id="xp-c">0</span>/<span id="xp-m">100</span> — <span id="xp-lvl-word">רמה</span> <span id="xp-l">1</span></div></div>
   <div id="wave-timer"></div>
   <div id="special-event"></div>
   <div id="toast"></div>
   <div id="achieve"><div class="a-ico" id="ach-ico">🏆</div><div><div class="a-title" id="ach-title"></div><div class="a-desc" id="ach-desc"></div></div></div>
-  <div id="bld-popup"><div class="bp-title" id="bpt"></div><button class="bp-btn" id="bp-upgrade"></button><button class="bp-btn" id="bp-repair" style="display:none"></button><button class="bp-btn" id="bp-sell"></button><div class="bp-close" onclick="closeBldPopup()">✕ סגור</div></div>
+  <div id="bld-popup"><div class="bp-title" id="bpt"></div><button class="bp-btn" id="bp-upgrade"></button><button class="bp-btn" id="bp-repair" style="display:none"></button><button class="bp-btn" id="bp-sell"></button><div class="bp-close" id="bp-close-btn" onclick="closeBldPopup()">✕ סגור</div></div>
   <div id="haptic-flash"></div>
+<div id="combo-flash"></div>
 
   <!-- D-PAD -->
   <div id="dpad" style="display:none;">
@@ -905,12 +1144,12 @@ canvas {
 
   <!-- ACTIONS 3×2 -->
   <div id="actions" style="display:none;">
-    <div class="act" id="btn-collect"><div class="a-ico">💎</div><div class="a-lbl">אסוף</div><div class="a-cost">חינם</div></div>
-    <div class="act beam" id="btn-beam"><div class="a-ico">🔆</div><div class="a-lbl">קרן</div><div class="a-cost">8⚡</div></div>
-    <div class="act build-btn" id="btn-build"><div class="a-ico">🏗️</div><div class="a-lbl">בנה</div><div class="a-cost">[Z]</div></div>
-    <div class="act shield" id="btn-shield"><div class="a-ico">🛡️</div><div class="a-lbl">מגן</div><div class="a-cost">5⚡</div></div>
-    <div class="act lightning-btn" id="btn-lightning"><div class="a-ico">⚡</div><div class="a-lbl">ברק</div><div class="a-cost">10⚡</div></div>
-    <div class="act cycle-btn" id="btn-cycle"><div class="a-ico" id="cycle-ico">🏠</div><div class="a-lbl">סוג</div><div class="a-cost">[Q]</div></div>
+    <div class="act" id="btn-collect"><div class="a-ico">💎</div><div class="a-lbl" id="act-collect-lbl">אסוף</div><div class="a-cost" id="act-collect-cost">חינם</div></div>
+    <div class="act beam" id="btn-beam"><div class="a-ico">🔆</div><div class="a-lbl" id="act-beam-lbl">קרן</div><div class="a-cost">8⚡</div></div>
+    <div class="act build-btn" id="btn-build"><div class="a-ico">🏗️</div><div class="a-lbl" id="act-build-lbl">בנה</div><div class="a-cost">[Z]</div></div>
+    <div class="act shield" id="btn-shield"><div class="a-ico">🛡️</div><div class="a-lbl" id="act-shield-lbl">מגן</div><div class="a-cost">5⚡</div></div>
+    <div class="act lightning-btn" id="btn-lightning"><div class="a-ico">⚡</div><div class="a-lbl" id="act-lightning-lbl">ברק</div><div class="a-cost">10⚡</div></div>
+    <div class="act cycle-btn" id="btn-cycle"><div class="a-ico" id="cycle-ico">🏠</div><div class="a-lbl" id="act-type-lbl">סוג</div><div class="a-cost">[Q]</div></div>
   </div>
 
   <!-- BUILD PANEL -->
@@ -922,12 +1161,37 @@ canvas {
     <div class="bi" data-i="3"><div class="b-ico">⛩️</div><div class="b-cost">80⚡</div></div>
   </div>
 
-  <div id="kb-hint">חצים=תנועה | Z=בנה | X=אסוף | C=מגן | V=קרן | B=ברק | Q=החלף | ESC=השהה</div>
+  <div id="kb-hint" data-he="חצים=תנועה | Z=בנה | X=אסוף | C=מגן | V=קרן | B=ברק | Q=החלף | ESC=השהה" data-en="Arrows=Move | Z=Build | X=Collect | C=Shield | V=Beam | B=Bolt | Q=Switch | ESC=Pause">חצים=תנועה | Z=בנה | X=אסוף | C=מגן | V=קרן | B=ברק | Q=החלף | ESC=השהה</div>
 
 </div><!-- end #game-root -->
 
 <script>
 'use strict';
+
+// ════════════════════════════════════════════════════════════
+// MUSIC STATE — declared at top so no TDZ errors
+// ════════════════════════════════════════════════════════════
+let musicEnabled = true;
+let musicNodes   = [];
+let musicScheduler = null;
+let musicStarted   = false;
+const MUSIC_VOL    = 0.18;
+try {
+  const _ms = localStorage.getItem('pg6_music');
+  if (_ms !== null) musicEnabled = _ms === '1';
+} catch(e) {}
+
+// ── Music styles — different track "vibes" the player can cycle through ──
+const MUSIC_STYLES = [
+  { id:'space',  labelKey:'musicStyleSpace', beatLen:0.55, lead:'sine',     progression:[{root:220,type:'min'},{root:196,type:'maj'},{root:174.61,type:'maj'},{root:196,type:'maj'}] },
+  { id:'energy', labelKey:'musicStyleEnergy', beatLen:0.38, lead:'square',   progression:[{root:220,type:'min'},{root:246.94,type:'min'},{root:196,type:'maj'},{root:220,type:'min'}] },
+  { id:'dream',  labelKey:'musicStyleDream', beatLen:0.75, lead:'triangle', progression:[{root:196,type:'maj'},{root:220,type:'min'},{root:261.63,type:'min'},{root:174.61,type:'maj'}] },
+];
+let musicStyleIdx = 0;
+try {
+  const _mst = localStorage.getItem('pg6_music_style');
+  if (_mst !== null && MUSIC_STYLES[+_mst]) musicStyleIdx = +_mst;
+} catch(e) {}
 
 // ════════════════════════════════════════════════════════════
 // BROWSER WEAPON DISARMING — must run before anything else.
@@ -1005,15 +1269,29 @@ function getReservedH(){
 function resize(){
   W=window.visualViewport?window.visualViewport.width:window.innerWidth;
   H=window.visualViewport?window.visualViewport.height:window.innerHeight;
-  cBg.width=cGame.width=cUi.width=W;
-  cBg.height=cGame.height=cUi.height=H;
-  // Target: ground = exactly 1/3 of screen height, sky = 2/3.
-  // (Bottom controls float over the ground visually; they no longer force
-  // the ground band to grow past 1/3 — only an extreme, near-unusable
-  // viewport height would ever hit the hard floor below.)
-  const idealGY = H * (2/3);
-  const minAbsGroundH = H * 0.22; // hard floor: ground never below 22% of height
-  GY = Math.min(idealGY, H - minAbsGroundH);
+  // Render the canvas backing store at full device-pixel resolution so
+  // emoji/sprites stay crisp on high-DPI phones (previously canvases were
+  // sized in CSS pixels only, which made everything look soft/blurry).
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  [[cBg,xBg],[cGame,ctx],[cUi,xUi]].forEach(([c,x])=>{
+    c.width  = Math.round(W*dpr);
+    c.height = Math.round(H*dpr);
+    x.setTransform(dpr,0,0,dpr,0,0);
+  });
+  const reserved = getReservedH();
+  // In landscape, controls are now ONE strip (not stacked 2 layers).
+  // Sprite clearance reduced: character ~40px tall at landscape scale.
+  // Target sky: 58-65% of viewport height.
+  const spriteClear = 50;
+  const maxGY = H - reserved - spriteClear;
+  const idealGY = H * 0.62;   // 62% sky is the design target
+  const minGY   = H * 0.50;   // never less than 50% sky
+  const minAbs  = H * 0.28;   // absolute floor on tiny screens
+  if (maxGY < minGY) {
+    GY = Math.max(maxGY, H * minAbs);
+  } else {
+    GY = clamp(Math.min(idealGY, maxGY), minGY, maxGY);
+  }
   buildTerrain();
 }
 if(window.visualViewport){
@@ -1026,8 +1304,21 @@ window.addEventListener('orientationchange',()=>setTimeout(resize,150));
 // AUDIO
 // ════════════════════════════════════════════════════════════
 let AC,masterGain,ambOsc;
-function initAudioBase(){
-  try{AC=new(window.AudioContext||window.webkitAudioContext)();masterGain=AC.createGain();masterGain.gain.value=.33;masterGain.connect(AC.destination);startAmb(55);}catch(e){}
+function initAudio(){
+  try{
+    AC=new(window.AudioContext||window.webkitAudioContext)();
+    masterGain=AC.createGain();
+    masterGain.gain.value=.33;
+    masterGain.connect(AC.destination);
+    startAmb(55);
+  }catch(e){}
+  // Start background music after audio context is ready
+  setTimeout(() => {
+    updateMusicBtns();
+    if (musicEnabled) startMusic();
+    const mhb = document.getElementById('music-hud-btn');
+    if (mhb) mhb.style.display = 'inline-block';
+  }, 100);
 }
 function startAmb(note=55){
   if(!AC)return;try{if(ambOsc)ambOsc.stop();}catch(e){}
@@ -1082,14 +1373,76 @@ const wtN=wx=>wx-camX*.2;
 const wtC=wx=>wx-camX*.4;
 const wtW=wx=>wx-camX;
 
+
+// ══════════════════════════════════════════════════════════════
+// PLANET THEMES — unique visual per stage
+// ══════════════════════════════════════════════════════════════
+const PLANET_THEMES = [
+  { name:'כוכב שומם',
+    skyTop:[30,10,10],skyBot:[80,30,20],nightTop:[10,5,20],nightBot:[20,10,30],
+    groundTop:'#4a2a1a',groundMid:'#2a1008',groundBot:'#100503',
+    groundEdge:'rgba(100,50,20,.35)',fog:'rgba(120,40,10,.08)',
+    starTint:[255,200,180],crystalColors:['#ff8855','#ffaa44','#ff6622','#ffcc55'],
+  },
+  { name:'עולם סגול',
+    skyTop:[40,10,60],skyBot:[100,20,40],nightTop:[15,5,35],nightBot:[30,8,55],
+    groundTop:'#5a1a3a',groundMid:'#380a22',groundBot:'#180510',
+    groundEdge:'rgba(180,50,100,.32)',fog:'rgba(100,20,80,.07)',
+    starTint:[220,180,255],crystalColors:['#ff55ff','#aa44ff','#ff88cc','#cc55ee'],
+  },
+  { name:'כוכב הסערה',
+    skyTop:[60,10,5],skyBot:[130,30,10],nightTop:[30,5,5],nightBot:[60,15,10],
+    groundTop:'#3a1505',groundMid:'#200a02',groundBot:'#0f0401',
+    groundEdge:'rgba(200,80,20,.4)',fog:'rgba(180,40,0,.12)',
+    starTint:[255,180,150],crystalColors:['#ff4400','#ff8800','#ffaa00','#ff2200'],
+    lightning:true,
+  },
+  { name:'כוכב האוקיינוס',
+    skyTop:[5,30,80],skyBot:[10,80,120],nightTop:[5,15,40],nightBot:[8,30,70],
+    groundTop:'#0a3a4a',groundMid:'#052030',groundBot:'#021018',
+    groundEdge:'rgba(0,180,200,.35)',fog:'rgba(0,100,180,.08)',
+    starTint:[180,230,255],crystalColors:['#00eeff','#00aaff','#44ffee','#0088ff'],
+  },
+  { name:'כוכב הלבה',
+    skyTop:[80,20,0],skyBot:[40,10,0],nightTop:[40,10,0],nightBot:[20,5,0],
+    groundTop:'#5a1500',groundMid:'#380800',groundBot:'#1a0300',
+    groundEdge:'rgba(255,80,0,.5)',fog:'rgba(200,50,0,.15)',
+    starTint:[255,150,100],crystalColors:['#ff2200','#ff6600','#ff4400','#ff8800'],
+    lava:true,
+  },
+  { name:'כוכב הג׳ונגל',
+    skyTop:[10,60,20],skyBot:[20,100,40],nightTop:[5,25,10],nightBot:[8,40,20],
+    groundTop:'#1a5a10',groundMid:'#0a3208',groundBot:'#051805',
+    groundEdge:'rgba(40,200,60,.35)',fog:'rgba(0,150,30,.08)',
+    starTint:[180,255,200],crystalColors:['#00ff44','#44ff88','#00ee66','#88ffaa'],
+    jungle:true,
+  },
+  { name:'כוכב החיים',
+    skyTop:[20,100,200],skyBot:[60,160,255],nightTop:[10,40,100],nightBot:[20,70,160],
+    groundTop:'#2a8a20',groundMid:'#185a10',groundBot:'#0a2808',
+    groundEdge:'rgba(60,220,80,.4)',fog:'rgba(20,180,255,.06)',
+    starTint:[200,220,255],crystalColors:['#00f5ff','#ffd700','#ff7eb3','#00ff88'],
+    paradise:true,
+  },
+];
+function currentTheme(){return PLANET_THEMES[Math.max(0,Math.min(stageIdx,6))];}
+
+// ══════════════════════════════════════════════════════════════
+// CO-OP STATE (variables declared here, P2 object declared near G,P)
+// ══════════════════════════════════════════════════════════════
+let coopMode=false;
+const touch2={left:false,right:false,up:false};
+
 function drawBg(){
   const night=nightF();
+  const th=currentTheme();
   const civF=clamp((G.pop||0)/800,0,1);
-  const skyT=lerpRGB(lerpRGB([5,5,24],[255,145,55],1-night),[30,80,180],civF*.4);
-  const skyB=lerpRGB(lerpRGB([8,12,50],[255,90,20],1-night),[10,40,100],civF*.3);
+  const skyT=lerpRGB(lerpRGB(th.skyTop,th.nightTop,night),[th.skyTop[0]+20,th.skyTop[1]+20,th.skyTop[2]+20],civF*.15);
+  const skyB=lerpRGB(lerpRGB(th.skyBot,th.nightBot,night),[th.skyBot[0]+10,th.skyBot[1]+10,th.skyBot[2]+10],civF*.1);
   const sg=xBg.createLinearGradient(0,0,0,GY);
   sg.addColorStop(0,`rgb(${skyT})`);sg.addColorStop(1,`rgb(${skyB})`);
   xBg.fillStyle=sg;xBg.fillRect(0,0,W,H);
+  if(th.fog){xBg.fillStyle=th.fog;xBg.fillRect(0,0,W,H);}
   NEBULAS.forEach(n=>{
     const sx=wtN(n.x);if(sx<-n.rx*2||sx>W+n.rx*2)return;
     const g=xBg.createRadialGradient(sx,n.y,0,sx,n.y,n.rx);
@@ -1100,19 +1453,39 @@ function drawBg(){
     const sx=wtS(s.x);if(sx<-2||sx>W+2)return;
     const tw=Math.sin(s.phase+G.time*s.spd*60)*.4+.6;
     const a=Math.min(1,night*tw*(.4+s.b*.6));if(a<.03)return;
-    xBg.beginPath();xBg.arc(sx,s.y,s.r,0,Math.PI*2);xBg.fillStyle=`rgba(255,255,255,${a})`;xBg.fill();
+    const st=th.starTint||[255,255,255];
+    xBg.beginPath();xBg.arc(sx,s.y,s.r,0,Math.PI*2);xBg.fillStyle=`rgba(${st[0]},${st[1]},${st[2]},${a})`;xBg.fill();
   });
   if(night<.5){const sa=1-night*2;xBg.shadowBlur=52;xBg.shadowColor=`rgba(255,240,100,${sa*.6})`;xBg.beginPath();xBg.arc(W*.82,H*.1,32,0,Math.PI*2);xBg.fillStyle=`rgba(255,240,100,${sa})`;xBg.fill();xBg.shadowBlur=0;}
   else{const ma=(night-.5)*2;xBg.shadowBlur=26;xBg.shadowColor=`rgba(220,230,255,${ma*.5})`;xBg.beginPath();xBg.arc(W*.15,H*.1,23,0,Math.PI*2);xBg.fillStyle=`rgba(220,230,255,${ma})`;xBg.fill();xBg.shadowBlur=0;}
   if(night>.65){const aa=(night-.65)/.35;['rgba(0,255,100,','rgba(80,0,255,','rgba(0,80,255,'].forEach((c,i)=>{const ag=xBg.createLinearGradient(0,H*.03,0,H*.4);ag.addColorStop(0,c+(aa*.09*Math.sin(G.time*.25+i))+')');ag.addColorStop(1,'transparent');xBg.fillStyle=ag;xBg.fillRect(0,0,W,H*.4);});}
   if(civF>.12){const ta=clamp((civF-.12)/.88,0,1);const ww=worldW();for(let tx=0;tx<ww;tx+=80){const sx=wtW(tx);if(sx<-20||sx>W+20)continue;const th=18+Math.sin(tx*.1)*7;xBg.globalAlpha=ta*.5;xBg.fillStyle='#1a5a10';xBg.beginPath();xBg.moveTo(sx,GY-th);xBg.lineTo(sx-11,GY);xBg.lineTo(sx+11,GY);xBg.closePath();xBg.fill();}xBg.globalAlpha=1;}
+  // Stage-specific FX
+  if(th.lava){
+    const lv=Math.sin(G.time*.8)*.5+.5;
+    xBg.fillStyle=`rgba(255,80,0,${.04+lv*.05})`;xBg.fillRect(0,GY-15,W,H);
+    for(let lx=0;lx<W;lx+=irnd(50,130)){const lw=irnd(2,7);xBg.fillStyle=`rgba(255,${irnd(80,160)},0,${.28+lv*.35})`;xBg.fillRect(lx,GY,lw,irnd(4,18));}
+  }
+  if(th.lightning&&Math.random()<.006){
+    const lx=rnd(W*.1,W*.9);xBg.strokeStyle=`rgba(255,255,100,${rnd(.4,.85)})`;xBg.lineWidth=rnd(1,2.5);
+    xBg.beginPath();xBg.moveTo(lx,0);let cx2=lx;
+    for(let y=0;y<GY;y+=rnd(22,55)){cx2+=rnd(-28,28);xBg.lineTo(cx2,y);}
+    xBg.stroke();
+  }
+  if(th.paradise){
+    const ra=Math.sin(G.time*.1)*.03+.04;
+    const rg=xBg.createRadialGradient(W*.5,GY,0,W*.5,GY,W*.5);
+    rg.addColorStop(0,'transparent');rg.addColorStop(.7,`rgba(255,200,50,${ra})`);
+    rg.addColorStop(.82,`rgba(100,255,100,${ra})`);rg.addColorStop(.94,`rgba(50,150,255,${ra})`);rg.addColorStop(1,'transparent');
+    xBg.fillStyle=rg;xBg.fillRect(0,0,W,H);
+  }
   bgClouds.forEach(cl=>{const sx=wtC(cl.x);const mx=((sx%W)+W)%W-cl.r;xBg.fillStyle=`rgba(255,255,255,${.05+night*.02})`;xBg.beginPath();xBg.arc(mx,cl.y,cl.r,0,Math.PI*2);xBg.arc(mx+cl.r*.68,cl.y-cl.r*.26,cl.r*.66,0,Math.PI*2);xBg.arc(mx-cl.r*.52,cl.y-cl.r*.18,cl.r*.56,0,Math.PI*2);xBg.fill();});
   const gg=xBg.createLinearGradient(0,GY,0,H);
-  gg.addColorStop(0,civF>.25?'#3a8a30':'#2d6a27');gg.addColorStop(.08,'#1a4a15');gg.addColorStop(.35,'#0f2a0a');gg.addColorStop(1,'#050d03');
+  gg.addColorStop(0,th.groundTop);gg.addColorStop(.1,th.groundMid);gg.addColorStop(.4,th.groundBot);gg.addColorStop(1,th.groundBot);
   xBg.fillStyle=gg;xBg.beginPath();xBg.moveTo(0,H);
   terrain.forEach(t=>xBg.lineTo(wtW(t.x),t.h));
   xBg.lineTo(W,H);xBg.closePath();xBg.fill();
-  xBg.strokeStyle=`rgba(${civF>.25?'80,220,60':'60,180,50'},.25)`;xBg.lineWidth=1.5;
+  xBg.strokeStyle=th.groundEdge||'rgba(60,180,50,.25)';xBg.lineWidth=1.5;
   xBg.beginPath();terrain.filter(t=>{const sx=wtW(t.x);return sx>=-2&&sx<=W+2;}).forEach((t,i,a)=>i?xBg.lineTo(wtW(t.x),t.h):xBg.moveTo(wtW(t.x),t.h));xBg.stroke();
 }
 
@@ -1136,54 +1509,697 @@ function groundAt(wx){
 // ════════════════════════════════════════════════════════════
 const COLORS=['#00f5ff','#ffd700','#ff7eb3','#00ff88','#bf5fff','#ff8800'];
 const BUILD_DATA=[
-  {name:'בית',  emoji:'🏠',cost:15,pop:5, pw:42,ph:38,col:'#3a7ad4',xpg:15},
-  {name:'מגדל', emoji:'🗼',cost:30,pop:12,pw:30,ph:64,col:'#8b4fd4',xpg:30},
-  {name:'מעבדה',emoji:'🔬',cost:50,pop:20,pw:50,ph:46,col:'#2ab88a',xpg:50},
-  {name:'מקדש', emoji:'⛩️',cost:80,pop:35,pw:56,ph:56,col:'#c44a4a',xpg:80},
+  {name:{he:'בית',  en:'House'},  emoji:'🏠',cost:15,pop:5, pw:42,ph:38,col:'#3a7ad4',xpg:15},
+  {name:{he:'מגדל', en:'Tower'},  emoji:'🗼',cost:30,pop:12,pw:30,ph:64,col:'#8b4fd4',xpg:30},
+  {name:{he:'מעבדה',en:'Lab'},    emoji:'🔬',cost:50,pop:20,pw:50,ph:46,col:'#2ab88a',xpg:50},
+  {name:{he:'מקדש', en:'Temple'}, emoji:'⛩️',cost:80,pop:35,pw:56,ph:56,col:'#c44a4a',xpg:80},
 ];
 const UPGRADES=[
-  {id:'doubleE',   name:'⚡ אנרגיה כפולה',  desc:'כל גביש = פי 2',            ico:'⚡'},
-  {id:'fastBuild', name:'🏗️ בנייה מהירה',  desc:'עלות -30%',                 ico:'🏗️'},
-  {id:'superShield',name:'🛡️ מגן-על',      desc:'מגן נמשך פי 3',            ico:'🛡️'},
-  {id:'autoCollect',name:'🤖 אוטו-אסיפה',  desc:'גבישים קרובים נאספים',    ico:'🤖'},
-  {id:'companion', name:'👾 חייזר-עוזר',   desc:'חבר שאוסף בשבילך',        ico:'👾'},
-  {id:'magnet',    name:'🧲 מגנט',          desc:'גבישים נמשכים אליך',     ico:'🧲'},
-  {id:'jetpack',   name:"🚀 ג'טפק",         desc:'טוס! לחץ ▲ באוויר',      ico:'🚀'},
-  {id:'bossKiller',name:'💥 מפציץ',         desc:'קרן/ברק הורסים בוס',     ico:'💥'},
-  {id:'regen',     name:'💚 ריגן',          desc:'חיים מתאוששים מהר',      ico:'💚'},
+  {id:'doubleE',   name:{he:'⚡ אנרגיה כפולה',en:'⚡ Double Energy'},  desc:{he:'כל גביש = פי 2',en:'Every crystal ×2'},            ico:'⚡'},
+  {id:'fastBuild', name:{he:'🏗️ בנייה מהירה',en:'🏗️ Fast Build'},  desc:{he:'עלות -30%',en:'Cost -30%'},                 ico:'🏗️'},
+  {id:'superShield',name:{he:'🛡️ מגן-על',en:'🛡️ Super Shield'},      desc:{he:'מגן נמשך פי 3',en:'Shield lasts ×3'},            ico:'🛡️'},
+  {id:'autoCollect',name:{he:'🤖 אוטו-אסיפה',en:'🤖 Auto-Collect'},  desc:{he:'גבישים קרובים נאספים',en:'Nearby crystals auto-collect'},    ico:'🤖'},
+  {id:'companion', name:{he:'👾 חייזר-עוזר',en:'👾 Alien Helper'},   desc:{he:'חבר שאוסף בשבילך',en:'A friend that collects for you'},        ico:'👾'},
+  {id:'magnet',    name:{he:'🧲 מגנט',en:'🧲 Magnet'},          desc:{he:'גבישים נמשכים אליך',en:'Crystals are drawn to you'},     ico:'🧲'},
+  {id:'jetpack',   name:{he:"🚀 ג'טפק",en:'🚀 Jetpack'},         desc:{he:'טוס! לחץ ▲ באוויר',en:'Fly! Press ▲ in mid-air'},      ico:'🚀'},
+  {id:'bossKiller',name:{he:'💥 מפציץ',en:'💥 Demolisher'},         desc:{he:'קרן/ברק הורסים בוס',en:'Beam/lightning destroy bosses'},     ico:'💥'},
+  {id:'regen',     name:{he:'💚 ריגן',en:'💚 Regen'},          desc:{he:'חיים מתאוששים מהר',en:'HP recovers fast'},      ico:'💚'},
 ];
 const SHOP_ITEMS=[
-  {ico:'⚡',name:'⚡ מטען',     desc:'+80 אנרגיה',           price:0, free:true,fn:()=>{G.energy+=80;}},
-  {ico:'🔧',name:'🔧 תיקון',   desc:'מתקן כל המבנים',       price:30,fn:()=>{buildings.forEach(b=>b.damage=0);toast('🔧 תוקן!');}},
-  {ico:'💎',name:'💎 גביש-על', desc:'+150 אנרגיה',           price:50,fn:()=>{G.energy+=150;}},
-  {ico:'💊',name:'💊 מרפא',    desc:'חיים מלאים',            price:20,fn:()=>{G.hp=G.maxHp;}},
-  {ico:'🛡️',name:'🛡️ מגן',   desc:'מגן 5 שניות',           price:15,fn:()=>{G.shieldOn=true;G.shieldT=300;}},
-  {ico:'📚',name:'📚 XP',      desc:'+50 XP',               price:25,fn:()=>{G.xp+=50;checkLvl();}},
-  {ico:'☄️',name:'☄️ ניקוי',  desc:'מנקה מטאורים',         price:35,fn:()=>{meteors=[];toast('☄️ שמיים נקיים!');}},
-  {ico:'👽',name:'👽 עולים',   desc:'+50 תושבים',            price:40,fn:()=>{G.pop+=50;}},
+  {ico:'⚡',name:{he:'⚡ מטען',en:'⚡ Charge'},     desc:{he:'+80 אנרגיה',en:'+80 Energy'},           price:0, free:true,fn:()=>{G.energy+=80;}},
+  {ico:'🔧',name:{he:'🔧 תיקון',en:'🔧 Repair'},   desc:{he:'מתקן כל המבנים',en:'Repairs all buildings'},       price:30,fn:()=>{buildings.forEach(b=>b.damage=0);toast('🔧 '+t('repairedMsg'));}},
+  {ico:'💎',name:{he:'💎 גביש-על',en:'💎 Super Crystal'}, desc:{he:'+150 אנרגיה',en:'+150 Energy'},           price:50,fn:()=>{G.energy+=150;}},
+  {ico:'💊',name:{he:'💊 מרפא',en:'💊 Healer'},    desc:{he:'חיים מלאים',en:'Full HP'},            price:20,fn:()=>{G.hp=G.maxHp;}},
+  {ico:'🛡️',name:{he:'🛡️ מגן',en:'🛡️ Shield'},   desc:{he:'מגן 5 שניות',en:'Shield for 5 seconds'},           price:15,fn:()=>{G.shieldOn=true;G.shieldT=300;}},
+  {ico:'📚',name:{he:'📚 XP',en:'📚 XP'},      desc:{he:'+50 XP',en:'+50 XP'},               price:25,fn:()=>{G.xp+=50;checkLvl();}},
+  {ico:'☄️',name:{he:'☄️ ניקוי',en:'☄️ Clear Sky'},  desc:{he:'מנקה מטאורים',en:'Clears meteors'},         price:35,fn:()=>{meteors=[];toast('☄️ '+t('skyCleanMsg'));}},
+  {ico:'👽',name:{he:'👽 עולים',en:'👽 Settlers'},   desc:{he:'+50 תושבים',en:'+50 Citizens'},            price:40,fn:()=>{G.pop+=50;}},
 ];
 const SPECIAL_EVENTS=[
-  {id:'rainbow',  ico:'🌈',title:'קשת קוסמית!', desc:'גבישים פי 3 — 10 שניות',dur:10,fn:()=>{G._crystalMult=3;},endFn:()=>{G._crystalMult=1;}},
-  {id:'quake',    ico:'🌋',title:'רעידת אדמה!', desc:'מבנים מדגדגים!',         dur:5, fn:()=>{G._quaking=true;},endFn:()=>{G._quaking=false;}},
-  {id:'meteor',   ico:'☄️',title:'גשם מטאורים!',desc:'מהירים! היזהר!',         dur:8, fn:()=>{G.meteorRate*=3;},endFn:()=>{G.meteorRate/=3;}},
-  {id:'windfall', ico:'💨',title:'רוח אנרגיה!', desc:'+5⚡/שנייה — 8 שניות',   dur:8, fn:()=>{G._windfall=true;},endFn:()=>{G._windfall=false;}},
-  {id:'starfall', ico:'⭐',title:'גשם כוכבים!', desc:'גבישים נדירים נופלים!',  dur:6, fn:()=>{for(let i=0;i<8;i++){const wx=rnd(40,worldW()-40);crystals.push({wx,y:-20,r:irnd(10,16),color:'#ffd700',pulse:0,floatY:0,val:irnd(4,8),falling:true,vy:rnd(2,4)});}},endFn:()=>{}},
-  {id:'powerdown',ico:'⚠️',title:'הפסקת חשמל!',desc:'הכנסה פסיבית מופסקת',    dur:7, fn:()=>{G._powerDown=true;},endFn:()=>{G._powerDown=false;}},
+  {id:'rainbow',  ico:'🌈',title:{he:'קשת קוסמית!',en:'Cosmic Rainbow!'}, desc:{he:'גבישים פי 3 — 10 שניות',en:'Crystals ×3 — 10 seconds'},dur:10,fn:()=>{G._crystalMult=3;},endFn:()=>{G._crystalMult=1;}},
+  {id:'quake',    ico:'🌋',title:{he:'רעידת אדמה!',en:'Earthquake!'}, desc:{he:'מבנים מדגדגים!',en:'Buildings are shaking!'},         dur:5, fn:()=>{G._quaking=true;},endFn:()=>{G._quaking=false;}},
+  {id:'meteor',   ico:'☄️',title:{he:'גשם מטאורים!',en:'Meteor Shower!'},desc:{he:'מהירים! היזהר!',en:'Fast! Watch out!'},         dur:8, fn:()=>{G.meteorRate*=3;},endFn:()=>{G.meteorRate/=3;}},
+  {id:'windfall', ico:'💨',title:{he:'רוח אנרגיה!',en:'Energy Windfall!'}, desc:{he:'+5⚡/שנייה — 8 שניות',en:'+5⚡/second — 8 seconds'},   dur:8, fn:()=>{G._windfall=true;},endFn:()=>{G._windfall=false;}},
+  {id:'starfall', ico:'⭐',title:{he:'גשם כוכבים!',en:'Star Shower!'}, desc:{he:'גבישים נדירים נופלים!',en:'Rare crystals are falling!'},  dur:6, fn:()=>{for(let i=0;i<8;i++){const wx=rnd(40,worldW()-40);crystals.push({wx,y:-20,r:irnd(10,16),color:'#ffd700',pulse:0,floatY:0,val:irnd(4,8),falling:true,vy:rnd(2,4)});}},endFn:()=>{}},
+  {id:'powerdown',ico:'⚠️',title:{he:'הפסקת חשמל!',en:'Power Outage!'},desc:{he:'הכנסה פסיבית מופסקת',en:'Passive income halted'},    dur:7, fn:()=>{G._powerDown=true;},endFn:()=>{G._powerDown=false;}},
 ];
-const STAGES=[
-  {num:1,title:'ייסוד',emoji:'🌱',story:'כוכב לכת שומם. אוויר דליל, קרקע קפואה. אתה — החייזר האחרון — יוצא מהחללית עם כלי בנייה בלבד.',goals:[{text:'אסוף 30 אנרגיה',ico:'⚡',check:()=>G._totalE>=30},{text:'בנה 2 בתים',ico:'🏠',check:()=>G.homes>=2}],reward:'🎁 חנות + שדרוג',rewardFn:()=>{G.energy+=30;setTimeout(()=>openShop('שלב 1!'),800);},meteorRate:.002,ambNote:55,btnTxt:'צא לדרך!'},
-  {num:2,title:'צמיחה',emoji:'🏙️',story:'הבית הראשון עומד. אבל ציוויליזציה אמיתית צריכה קהילה. המטאורים מתחילים לחוש את נוכחותך.',goals:[{text:'100 תושבים',ico:'👽',check:()=>G.pop>=100},{text:'4 מבנים',ico:'🏗️',check:()=>G.homes>=4},{text:'ניקוד 300',ico:'⭐',check:()=>G.score>=300}],reward:'🎁 מגן-על + 60⚡',rewardFn:()=>{G.energy+=60;G.up.superShield=true;setTimeout(()=>openShop('שלב 2!'),800);},meteorRate:.005,ambNote:65,btnTxt:'קדימה!'},
-  {num:3,title:'הסערה הראשונה',emoji:'⚡',story:'גשר אסטרואידים עובר ליד. יש לך 45 שניות לשרוד. אל תאבד את המבנים.',goals:[{text:'שרוד 45 שניות',ico:'⏱️',check:()=>(G._waveT||0)>=45},{text:'שמור 3+ מבנים',ico:'🏠',check:()=>G.homes>=3}],reward:'🎁 אוטו-אסיפה + 80⚡',rewardFn:()=>{G.energy+=80;G.up.autoCollect=true;setTimeout(()=>openShop('שלב 3!'),800);},meteorRate:.028,waveMode:true,ambNote:45,btnTxt:'לסערה!'},
-  {num:4,title:'קפיצת מדרגה',emoji:'🔬',story:'הקהילה גדלה. הגיע הזמן למדע. מעבדה תפענח את סודות הכוכב.',goals:[{text:'בנה מעבדה',ico:'🔬',check:()=>buildings.some(b=>b.type===2)},{text:'בנה מגדל',ico:'🗼',check:()=>buildings.some(b=>b.type===1)},{text:'הגע לרמה 4',ico:'🎯',check:()=>G.level>=4}],reward:"🎁 ג'טפק + עוזר",rewardFn:()=>{G.up.jetpack=true;G.up.companion=true;spawnCompanion();setTimeout(()=>openShop('שלב 4!'),800);},meteorRate:.007,ambNote:73,btnTxt:'לפסגה!'},
-  {num:5,title:'המלחמה הגדולה',emoji:'👹',story:'שלושה בוסי-מטאור. הם מגיעים אחד אחרי השני. השמד את כולם.',goals:[{text:'הדוף בוס 1',ico:'👹',check:()=>(G._bossKills||0)>=1},{text:'הדוף בוס 2',ico:'👹',check:()=>(G._bossKills||0)>=2},{text:'הדוף בוס 3',ico:'👹',check:()=>(G._bossKills||0)>=3}],reward:'🎁 מגנט + אנרגיה כפולה',rewardFn:()=>{G.up.magnet=true;G.up.doubleE=true;setTimeout(()=>openShop('שלב 5!'),800);},meteorRate:.003,bossMode:true,ambNote:41,btnTxt:'קרב!'},
-  {num:6,title:'תרבות',emoji:'⛩️',story:'העיר שורדת. אבל ציוויליזציה אמיתית צריכה נשמה. המקדש הקוסמי יחבר את תושביך.',goals:[{text:'בנה מקדש',ico:'⛩️',check:()=>buildings.some(b=>b.type===3)},{text:'500 תושבים',ico:'👽',check:()=>G.pop>=500},{text:'ניקוד 3000',ico:'🌟',check:()=>G.score>=3000}],reward:'🎁 מפציץ + בנייה מהירה',rewardFn:()=>{G.up.bossKiller=true;G.up.fastBuild=true;setTimeout(()=>openShop('שלב 6!'),800);},meteorRate:.009,ambNote:82,btnTxt:'לגדולה!'},
-  {num:7,title:'הכוכב חי',emoji:'🌍',story:'זה הרגע. הכוכב המת מתעורר לחיים. הצמחייה פורצת, אוקיינוסים מתמלאים.',goals:[{text:'1000 תושבים',ico:'👽',check:()=>G.pop>=1000},{text:'ניקוד 8000',ico:'🌟',check:()=>G.score>=8000},{text:'8 מבנים',ico:'🏙️',check:()=>G.homes>=8}],reward:'🏆 ניצחון!',rewardFn:()=>showVictory(),meteorRate:.012,ambNote:98,btnTxt:'לנצח!',isFinal:true},
+// Stage data — text stored in both languages
+const STAGE_DATA = {
+  he:[
+    {title:'ייסוד',story:'כוכב לכת שומם. אוויר דליל, קרקע קפואה. אתה — החייזר האחרון — יוצא מהחללית עם כלי בנייה בלבד.',goals:['goalEnergy','goalHomes2'],reward:'🎁 חנות + שדרוג',btn:'צא לדרך!'},
+    {title:'צמיחה',story:'הבית הראשון עומד. אבל ציוויליזציה אמיתית צריכה קהילה. המטאורים מתחילים לחוש את נוכחותך.',goals:['goal100pop','goal4homes','goal300score'],reward:'🎁 מגן-על + 60⚡',btn:'קדימה!'},
+    {title:'הסערה הראשונה',story:'גשר אסטרואידים עובר ליד. יש לך 45 שניות לשרוד. אל תאבד את המבנים.',goals:['goalSurvive45','goalKeep3'],reward:'🎁 אוטו-אסיפה + 80⚡',btn:'לסערה!'},
+    {title:'קפיצת מדרגה',story:'הקהילה גדלה. הגיע הזמן למדע. מעבדה תפענח את סודות הכוכב.',goals:['goalLab','goalTower','goalLevel4'],reward:"🎁 ג'טפק + עוזר",btn:'לפסגה!'},
+    {title:'המלחמה הגדולה',story:'שלושה בוסי-מטאור. הם מגיעים אחד אחרי השני. השמד את כולם.',goals:['goalBoss1','goalBoss2','goalBoss3'],reward:'🎁 מגנט + אנרגיה כפולה',btn:'קרב!'},
+    {title:'תרבות',story:'העיר שורדת. אבל ציוויליזציה אמיתית צריכה נשמה. המקדש הקוסמי יחבר את תושביך.',goals:['goalTemple','goal500pop','goal3000score'],reward:'🎁 מפציץ + בנייה מהירה',btn:'לגדולה!'},
+    {title:'הכוכב חי',story:'זה הרגע. הכוכב המת מתעורר לחיים. הצמחייה פורצת, אוקיינוסים מתמלאים.',goals:['goal1000pop','goal8000score','goal8homes'],reward:'🏆 ניצחון!',btn:'לנצח!'},
+  ],
+  en:[
+    {title:'Foundation',story:'A barren planet. Thin air, frozen ground. You — the last alien — step out of the ship with only building tools.',goals:['goalEnergy','goalHomes2'],reward:'🎁 Shop + Upgrade',btn:'Lets go!'},
+    {title:'Growth',story:'The first house stands. But a real civilization needs a community. Meteors begin sensing your presence.',goals:['goal100pop','goal4homes','goal300score'],reward:'🎁 Super Shield + 60⚡',btn:'Forward!'},
+    {title:'The First Storm',story:'An asteroid bridge passes nearby. You have 45 seconds to survive. Don\'t lose your buildings.',goals:['goalSurvive45','goalKeep3'],reward:'🎁 Auto-collect + 80⚡',btn:'Into the storm!'},
+    {title:'Leap Forward',story:'The community grows. Time for science. A lab will unlock the planet\'s secrets.',goals:['goalLab','goalTower','goalLevel4'],reward:'🎁 Jetpack + Helper',btn:'To the top!'},
+    {title:'The Great War',story:'Three meteor bosses. They come one after another. Destroy them all.',goals:['goalBoss1','goalBoss2','goalBoss3'],reward:'🎁 Magnet + Double Energy',btn:'Fight!'},
+    {title:'Culture',story:'The city survives. But a real civilization needs a soul. The cosmic temple will connect your citizens.',goals:['goalTemple','goal500pop','goal3000score'],reward:'🎁 Blaster + Fast Build',btn:'To greatness!'},
+    {title:'The Planet Lives',story:'This is the moment. The dead planet awakens. Vegetation bursts, oceans fill, skies turn blue.',goals:['goal1000pop','goal8000score','goal8homes'],reward:'🏆 Victory!',btn:'Victory!'},
+  ]
+};
+const GOAL_CHECKS = [
+  [()=>G._totalE>=30, ()=>G.homes>=2],
+  [()=>G.pop>=100, ()=>G.homes>=4, ()=>G.score>=300],
+  [()=>(G._waveT||0)>=45, ()=>G.homes>=3],
+  [()=>buildings.some(b=>b.type===2), ()=>buildings.some(b=>b.type===1), ()=>G.level>=4],
+  [()=>(G._bossKills||0)>=1, ()=>(G._bossKills||0)>=2, ()=>(G._bossKills||0)>=3],
+  [()=>buildings.some(b=>b.type===3), ()=>G.pop>=500, ()=>G.score>=3000],
+  [()=>G.pop>=1000, ()=>G.score>=8000, ()=>G.homes>=8],
 ];
+const GOAL_ICOS = [
+  ['⚡','🏠'],['👽','🏗️','⭐'],['⏱️','🏠'],
+  ['🔬','🗼','🎯'],['👹','👹','👹'],
+  ['⛩️','👽','🌟'],['👽','🌟','🏙️'],
+];
+const STAGE_REWARDS = [
+  ()=>{G.energy+=30;setTimeout(()=>openShop('Stage 1!'),800);},
+  ()=>{G.energy+=60;G.up.superShield=true;setTimeout(()=>openShop('Stage 2!'),800);},
+  ()=>{G.energy+=80;G.up.autoCollect=true;setTimeout(()=>openShop('Stage 3!'),800);},
+  ()=>{G.up.jetpack=true;G.up.companion=true;spawnCompanion();setTimeout(()=>openShop('Stage 4!'),800);},
+  ()=>{G.up.magnet=true;G.up.doubleE=true;setTimeout(()=>openShop('Stage 5!'),800);},
+  ()=>{G.up.bossKiller=true;G.up.fastBuild=true;setTimeout(()=>openShop('Stage 6!'),800);},
+  ()=>showVictory(),
+];
+const STAGE_CONFIGS = [
+  {meteorRate:.002,ambNote:55},
+  {meteorRate:.005,ambNote:65},
+  {meteorRate:.028,ambNote:45,waveMode:true},
+  {meteorRate:.007,ambNote:73},
+  {meteorRate:.003,ambNote:41,bossMode:true},
+  {meteorRate:.009,ambNote:82},
+  {meteorRate:.012,ambNote:98,isFinal:true},
+];
+
+// ════════════════════════════════════════════════════════════
+// LANGUAGE SYSTEM (Hebrew / English)
+// ════════════════════════════════════════════════════════════
+let currentLang = 'he';
+try { currentLang = localStorage.getItem('pg6_lang') || 'he'; } catch(e){}
+
+// Build STAGES array dynamically from current language
+function buildStages(){
+  const lang = currentLang==='en' ? 'en' : 'he';
+  return STAGE_DATA[lang].map((s,i)=>({
+    num:i+1, title:s.title, emoji:['🌱','🏙️','⚡','🔬','👹','⛩️','🌍'][i],
+    story:s.story,
+    goals: s.goals.map((gk,j)=>({
+      text:t(gk), ico:GOAL_ICOS[i][j],
+      check:GOAL_CHECKS[i][j]
+    })),
+    reward:s.reward, rewardFn:STAGE_REWARDS[i],
+    btnTxt:s.btn,
+    ...STAGE_CONFIGS[i],
+  }));
+}
+
 
 // ════════════════════════════════════════════════════════════
 // GAME STATE
 // ════════════════════════════════════════════════════════════
-let G={},P={};
+
+const T = {
+  he: {
+    // Char select
+    charTitle:'בחר את הדמות שלך', charStart:'▶ התחל משחק',
+    // Splash
+    splashHint:'✈️ עובד ללא אינטרנט',
+    splashMsg0:'טוען עולמות...', splashMsg1:'מאתחל מטאורים...',
+    splashMsg2:'בונה ציוויליזציה...', splashMsg3:'כמעט מוכן...',
+    // Intro
+    campaignTitle:'קמפיין', campaignDesc:'7 שלבים עם סיפור',
+    freeTitle:'חופשי', freeDesc:'שחק ללא הגבלה',
+    nameLabel:'שם:', namePlaceholder:'חייזר-1',
+    coopOff:'Co-op 2 שחקנים (כבוי)', coopOn:'Co-op 2 שחקנים (פעיל)',
+    musicLabel:'מוזיקת רקע',
+    langBtn:'🌐 EN',
+    // Stats
+    statsSpeed:'מהירות', statsEnergy:'אנרגיה', statsShield:'הגנה',
+    statsBuild:'בנייה', statsLuck:'מזל',
+    // In-game HUD labels
+    hudEnergy:'אנרגיה', hudHP:'חיים', hudHomes:'מבנים',
+    hudPop:'תושבים', hudScore:'ניקוד', hudLevel:'רמה',
+    // Stage screen
+    stageEyebrow:'שלב', stageGoalsHdr:'🎯 יעדי השלב',
+    // Actions / toasts
+    buildNoEnergy:'❌ צריך', buildPlace:'לבנות',
+    buildOccupied:'❌ מקום תפוס!',
+    buildOk:'✅ נבנה!', buildPop:'+תושבים',
+    collectNear:'💎 התקרב לגביש!',
+    shieldLow:'❌ אין מספיק לחיצה', shieldOn:'🛡️ מגן!',
+    beamLow:'❌ לקרן', beamOn:'🔆 קרן!',
+    lightningLow:'❌ לברק', lightningNoTarget:'⚡ אין מטאורים בטווח!',
+    // Shop
+    shopTitle:'🏪 חנות קוסמית', shopSkip:'דלג →',
+    // Level up
+    levelUpTitle:'⭐ LEVEL UP!', levelUpSub:'בחר שדרוג:',
+    // Stage goals
+    goalEnergy:'אסוף 30 אנרגיה', goalHomes2:'בנה 2 בתים',
+    goal100pop:'100 תושבים', goal4homes:'4 מבנים', goal300score:'ניקוד 300',
+    goalSurvive45:'שרוד 45 שניות', goalKeep3:'שמור 3+ מבנים',
+    goalLab:'בנה מעבדה', goalTower:'בנה מגדל', goalLevel4:'הגע לרמה 4',
+    goalBoss1:'הדוף בוס 1', goalBoss2:'הדוף בוס 2', goalBoss3:'הדוף בוס 3',
+    goalTemple:'בנה מקדש', goal500pop:'500 תושבים', goal3000score:'ניקוד 3000',
+    goal1000pop:'1000 תושבים', goal8000score:'ניקוד 8000', goal8homes:'8 מבנים',
+    // Game over / victory
+    gameOver:'☠️ GAME OVER', victory:'🌍 הכוכב חי!',
+    victoryDesc:'השלמת את כל 7 השלבים!',
+    overReason:'הציוויליזציה קרסה',
+    alienDied:'החייזר מת!',
+    hpRanOut:'החיים אזלו!',
+    backMenu:'🏠 תפריט ראשי', restart:'🔄 שחק שוב',
+    statScore:'ניקוד', statLevel:'רמה', statSeconds:'שניות', statCitizens:'תושבים',
+    // Pause
+    paused:'⏸ PAUSED', resume:'▶ המשך', pauseRestart:'🔄 התחל מחדש',
+    // Toasts / misc
+    builtSuffix:'נבנה!', destroyedSuffix:'נהרס!', damagedSuffix:'נפגע! לחץ לתיקון',
+    repairedMsg:'תוקן!', skyCleanMsg:'שמיים נקיים!', freeLabel:'חינם',
+    shopChooseItem:'בחר פריט', closeLabel:'✕ סגור',
+    objectivesHdr:'יעדי שלב', buildLblColon:'בנה:',
+    bpUpgrade:'שדרג', bpSell:'מכור',
+    actCollect:'אסוף', actBeam:'קרן', actBuild:'בנה', actShield:'מגן', actLightning:'ברק', actType:'סוג',
+    musicHint:'מוזיקה', flightNote:'✈️ עובד במצב טיסה · מצב אופקי בלבד',
+    voiceToggleLbl:'פקודות קול', voiceHint:'פקודות קול',
+    voiceOn:'פקודות קול הופעלו! נסה להגיד "בנה" או "קפוץ"',
+    voiceOff:'פקודות קול כבויות',
+    voiceUnsupported:'פקודות קול לא נתמכות בדפדפן הזה',
+    voiceMicDenied:'אין גישה למיקרופון',
+    // Legend / controls panel
+    legendTitle:'⌨️ מקרא מקשים',
+    sectionMove:'🕹️ תנועה', sectionActions:'⚡ פעולות', sectionBuild:'🏗️ בנייה', sectionSystem:'⚙️ מערכת',
+    orWord:'או',
+    ctrlArrowsLbl:'חצים', ctrlArrowsDesc:'תנועה',
+    ctrlBuildLbl:'Z', ctrlBuildDesc:'בנה מבנה',
+    ctrlCollectLbl:'X', ctrlCollectDesc:'אסוף גבישים',
+    ctrlShieldLbl:'C', ctrlShieldDesc:'מגן',
+    ctrlBeamLbl:'V', ctrlBeamDesc:'קרן לייזר',
+    ctrlLightningLbl:'B', ctrlLightningDesc:'ברק',
+    moveLeft:'שמאלה', moveRight:'ימינה', moveJump:'קפוץ', moveJumpDesc:'— שוב באוויר לג\'טפק',
+    legendCollectLbl:'אסוף', legendCollectDesc:'גבישי אנרגיה',
+    legendBeamLbl:'קרן לייזר', legendBeamCost:'— 8⚡',
+    legendShieldLbl:'מגן', legendShieldCost:'— 5⚡',
+    legendLightningLbl:'ברק סביבתי', legendLightningCost:'— 10⚡',
+    legendBuildLbl:'בנה', legendBuildDesc:'את הסוג הנבחר',
+    legendSwapLbl:'החלף סוג',
+    legendPauseLbl:'השהה',
+    // Music styles
+    musicStyleSpace:'🌌 חלל רגוע', musicStyleEnergy:'⚡ אנרגטי', musicStyleDream:'🌙 חלומי',
+    musicCycleHint:'🔀',
+    // Co-op
+    player2Name:'שחקן 2',
+    coopActive:'👾 Co-op! שחקן 2: IJKL',
+    coopOff2:'👾 Co-op כבוי',
+    // Weather / events
+    bossWaveStart:'🔥 גל בוס! שרוד 20 שניות!',
+    bossWaveEnd:'🎉 הגל הסתיים!',
+    stageComplete:'🎉 שלב הושלם!',
+    // Rotate
+    rotateMsg:'סובב את הטלפון',
+    rotateSub:'המשחק עובד במצב אופקי בלבד',
+    rotateLbl:'LOADING UNIVERSE...',
+  },
+  en: {
+    // Char select
+    charTitle:'Choose your character', charStart:'▶ Start Game',
+    // Splash
+    splashHint:'✈️ Works offline',
+    splashMsg0:'Loading worlds...', splashMsg1:'Initializing meteors...',
+    splashMsg2:'Building civilization...', splashMsg3:'Almost ready...',
+    // Intro
+    campaignTitle:'Campaign', campaignDesc:'7 story stages',
+    freeTitle:'Free Play', freeDesc:'Play without limits',
+    nameLabel:'Name:', namePlaceholder:'Alien-1',
+    coopOff:'Co-op 2 players (off)', coopOn:'Co-op 2 players (on)',
+    musicLabel:'Background music',
+    langBtn:'🌐 עב',
+    // Stats
+    statsSpeed:'Speed', statsEnergy:'Energy', statsShield:'Shield',
+    statsBuild:'Build', statsLuck:'Luck',
+    // In-game HUD labels
+    hudEnergy:'Energy', hudHP:'HP', hudHomes:'Buildings',
+    hudPop:'Citizens', hudScore:'Score', hudLevel:'Level',
+    // Stage screen
+    stageEyebrow:'Stage', stageGoalsHdr:'🎯 Stage Goals',
+    // Actions / toasts
+    buildNoEnergy:'❌ Need', buildPlace:'to build',
+    buildOccupied:'❌ Space taken!',
+    buildOk:'✅ Built!', buildPop:'+citizens',
+    collectNear:'💎 Get closer to a crystal!',
+    shieldLow:'❌ Not enough for shield', shieldOn:'🛡️ Shield!',
+    beamLow:'❌ for beam', beamOn:'🔆 Beam!',
+    lightningLow:'❌ for lightning', lightningNoTarget:'⚡ No meteors in range!',
+    // Shop
+    shopTitle:'🏪 Cosmic Shop', shopSkip:'Skip →',
+    // Level up
+    levelUpTitle:'⭐ LEVEL UP!', levelUpSub:'choose upgrade:',
+    // Stage goals
+    goalEnergy:'Collect 30 energy', goalHomes2:'Build 2 houses',
+    goal100pop:'100 citizens', goal4homes:'4 buildings', goal300score:'Score 300',
+    goalSurvive45:'Survive 45 seconds', goalKeep3:'Keep 3+ buildings',
+    goalLab:'Build a lab', goalTower:'Build a tower', goalLevel4:'Reach level 4',
+    goalBoss1:'Repel boss 1', goalBoss2:'Repel boss 2', goalBoss3:'Repel boss 3',
+    goalTemple:'Build a temple', goal500pop:'500 citizens', goal3000score:'Score 3000',
+    goal1000pop:'1000 citizens', goal8000score:'Score 8000', goal8homes:'8 buildings',
+    // Game over / victory
+    gameOver:'☠️ GAME OVER', victory:'🌍 The Planet Lives!',
+    victoryDesc:'You completed all 7 stages!',
+    overReason:'The civilization collapsed',
+    alienDied:'The alien died!',
+    hpRanOut:'HP ran out!',
+    backMenu:'🏠 Main Menu', restart:'🔄 Play Again',
+    statScore:'Score', statLevel:'Level', statSeconds:'Seconds', statCitizens:'Citizens',
+    // Pause
+    paused:'⏸ PAUSED', resume:'▶ Resume', pauseRestart:'🔄 Restart',
+    // Toasts / misc
+    builtSuffix:'Built!', destroyedSuffix:'destroyed!', damagedSuffix:'damaged! Tap to repair',
+    repairedMsg:'Repaired!', skyCleanMsg:'Sky is clear!', freeLabel:'Free',
+    shopChooseItem:'Choose item', closeLabel:'✕ Close',
+    objectivesHdr:'Stage goals', buildLblColon:'Build:',
+    bpUpgrade:'Upgrade', bpSell:'Sell',
+    actCollect:'Collect', actBeam:'Beam', actBuild:'Build', actShield:'Shield', actLightning:'Bolt', actType:'Type',
+    musicHint:'Music', flightNote:'✈️ Works in flight mode · Landscape only',
+    voiceToggleLbl:'Voice Commands', voiceHint:'Voice Commands',
+    voiceOn:'Voice commands on! Try saying "build" or "jump"',
+    voiceOff:'Voice commands off',
+    voiceUnsupported:"Voice commands aren't supported in this browser",
+    voiceMicDenied:'Microphone access denied',
+    // Legend / controls panel
+    legendTitle:'⌨️ Controls',
+    sectionMove:'🕹️ Movement', sectionActions:'⚡ Actions', sectionBuild:'🏗️ Building', sectionSystem:'⚙️ System',
+    orWord:'or',
+    ctrlArrowsLbl:'Arrows', ctrlArrowsDesc:'Move',
+    ctrlBuildLbl:'Z', ctrlBuildDesc:'Build structure',
+    ctrlCollectLbl:'X', ctrlCollectDesc:'Collect crystals',
+    ctrlShieldLbl:'C', ctrlShieldDesc:'Shield',
+    ctrlBeamLbl:'V', ctrlBeamDesc:'Laser beam',
+    ctrlLightningLbl:'B', ctrlLightningDesc:'Lightning',
+    moveLeft:'Left', moveRight:'Right', moveJump:'Jump', moveJumpDesc:'— again mid-air for jetpack',
+    legendCollectLbl:'Collect', legendCollectDesc:'energy crystals',
+    legendBeamLbl:'Laser beam', legendBeamCost:'— 8⚡',
+    legendShieldLbl:'Shield', legendShieldCost:'— 5⚡',
+    legendLightningLbl:'Environmental lightning', legendLightningCost:'— 10⚡',
+    legendBuildLbl:'Build', legendBuildDesc:'the selected type',
+    legendSwapLbl:'Switch type',
+    legendPauseLbl:'Pause',
+    // Music styles
+    musicStyleSpace:'🌌 Calm Space', musicStyleEnergy:'⚡ Energetic', musicStyleDream:'🌙 Dreamy',
+    musicCycleHint:'🔀',
+    // Co-op
+    player2Name:'Player 2',
+    coopActive:'👾 Co-op! Player 2: IJKL',
+    coopOff2:'👾 Co-op off',
+    // Weather / events
+    bossWaveStart:'🔥 Boss Wave! Survive 20 seconds!',
+    bossWaveEnd:'🎉 Wave cleared!',
+    stageComplete:'🎉 Stage complete!',
+    // Rotate
+    rotateMsg:'Rotate your phone',
+    rotateSub:'This game is landscape only',
+    rotateLbl:'LOADING UNIVERSE...',
+  }
+};
+function t(key){ return (T[currentLang]||T.he)[key] || key; }
+// Helper for inline bilingual {he:'...',en:'...'} fields on game-content
+// objects (BUILD_DATA, SHOP_ITEMS, UPGRADES, etc.) — returns the string for
+// the current language, falling back to Hebrew.
+function tt(obj){ if(obj==null) return ''; if(typeof obj==='string') return obj; return obj[currentLang]||obj.he||''; }
+let STAGES = buildStages();
+
+function toggleLang(){
+  currentLang = currentLang==='he' ? 'en' : 'he';
+  try{ localStorage.setItem('pg6_lang', currentLang); }catch(e){}
+  applyLang();
+}
+
+function applyLang(){
+  const isHe = currentLang==='he';
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir  = isHe ? 'rtl' : 'ltr';
+
+  // Helper: set text if element exists
+  const setText = (id, key) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = t(key);
+  };
+  const setPlaceholder = (id, key) => {
+    const el = document.getElementById(id);
+    if(el) el.placeholder = t(key);
+  };
+
+  // Lang toggle button
+  setText('lang-toggle', 'langBtn');
+
+  // ── Intro screen ──
+  const nl = document.querySelector('.name-lbl');
+  if(nl) nl.textContent = t('nameLabel');
+  setPlaceholder('player-name', 'namePlaceholder');
+  const mbtns = document.querySelectorAll('.mode-btn');
+  if(mbtns[0]){mbtns[0].querySelector('.m-title').textContent=t('campaignTitle');mbtns[0].querySelector('.m-desc').textContent=t('campaignDesc');}
+  if(mbtns[1]){mbtns[1].querySelector('.m-title').textContent=t('freeTitle');mbtns[1].querySelector('.m-desc').textContent=t('freeDesc');}
+  const mtl = document.querySelector('.mt-lbl');
+  if(mtl) mtl.textContent = t('musicLabel');
+
+  // ── Character screen ──
+  setText('char-title',      'charTitle');
+  setText('char-start-btn',  'charStart');
+  if(selectedChar) showCharDetails(selectedChar);
+
+  // ── HUD labels ──
+  setText('lbl-energy', 'hudEnergy');
+  setText('lbl-score',  'hudScore');
+  setText('lbl-pop',    'hudPop');
+  setText('lbl-homes',  'hudHomes');
+  setText('lbl-hp',     'hudHP');
+  setText('lbl-level',  'hudLevel');
+
+  // ── Stage screen ──
+  setText('st-eyebrow',   'stageEyebrow');
+  setText('st-goals-hdr', 'stageGoalsHdr');
+
+  // ── Shop ──
+  setText('shop-title',    'shopTitle');
+  setText('btn-shop-skip', 'shopSkip');
+
+  // ── Level up ──
+  setText('lu-title', 'levelUpTitle');
+
+  // ── Game over ──
+  setText('over-title',      'gameOver');
+  setText('btn-over-menu',   'backMenu');
+  setText('btn-over-restart','restart');
+  setText('os-score-lbl',    'statScore');
+  setText('os-level-lbl',    'statLevel');
+  setText('os-time-lbl',     'statSeconds');
+
+  // ── Victory ──
+  setText('vic-title', 'victory');
+  setText('vic-desc',  'victoryDesc');
+  setText('btn-vic-menu', 'backMenu');
+  setText('vs-score-lbl', 'statScore');
+  setText('vs-pop-lbl',   'statCitizens');
+  setText('vs-time-lbl',  'statSeconds');
+
+  // ── Pause ──
+  setText('pause-title',      'paused');
+  setText('btn-resume',       'resume');
+  setText('btn-pause-restart','pauseRestart');
+  setText('btn-pause-menu',   'backMenu');
+
+  // ── Rotate hint ──
+  setText('rotate-txt', 'rotateMsg');
+  setText('rotate-sub', 'rotateSub');
+
+  // ── Splash ──
+  setText('splash-sub', 'rotateLbl');
+
+  // ── Co-op label ──
+  const lbl = document.getElementById('coop-lbl');
+  if(lbl) lbl.textContent = t(coopMode ? 'coopOn' : 'coopOff');
+
+  // ── Controls legend (intro screen) ──
+  setText('cg-arrows-d',   'ctrlArrowsDesc');
+  setText('cg-build-d',    'ctrlBuildDesc');
+  setText('cg-collect-d',  'ctrlCollectDesc');
+  setText('cg-shield-d',   'ctrlShieldDesc');
+  setText('cg-beam-d',     'ctrlBeamDesc');
+  setText('cg-lightning-d','ctrlLightningDesc');
+  setText('legend-title',  'legendTitle');
+  setText('lg-sec-move',   'sectionMove');
+  setText('lg-sec-actions','sectionActions');
+  setText('lg-sec-build',  'sectionBuild');
+  setText('lg-sec-system', 'sectionSystem');
+  document.querySelectorAll('.legend-or').forEach(el=>el.textContent=t('orWord'));
+  setText('lg-left',   'moveLeft');
+  setText('lg-right',  'moveRight');
+  setText('lg-jump',   'moveJump');
+  setText('lg-jump-d', 'moveJumpDesc');
+  setText('lg-collect',   'legendCollectLbl');
+  setText('lg-collect-d', 'legendCollectDesc');
+  setText('lg-beam',   'legendBeamLbl');
+  setText('lg-beam-c', 'legendBeamCost');
+  setText('lg-shield',   'legendShieldLbl');
+  setText('lg-shield-c', 'legendShieldCost');
+  setText('lg-lightning',   'legendLightningLbl');
+  setText('lg-lightning-c', 'legendLightningCost');
+  setText('lg-build',   'legendBuildLbl');
+  setText('lg-build-d', 'legendBuildDesc');
+  setText('lg-swap',  'legendSwapLbl');
+  setText('lg-pause', 'legendPauseLbl');
+  setText('small-note', 'flightNote');
+
+  // ── In-game HUD chrome ──
+  setText('objectives-hdr', 'objectivesHdr');
+  setText('badge-prefix',   'stageEyebrow');
+  setText('xp-lvl-word',    'hudLevel');
+  setText('bp-close-btn',   'closeLabel');
+  setText('act-collect-lbl',  'actCollect');
+  setText('act-collect-cost', 'freeLabel');
+  setText('act-beam-lbl',     'actBeam');
+  setText('act-build-lbl',    'actBuild');
+  setText('act-shield-lbl',   'actShield');
+  setText('act-lightning-lbl','actLightning');
+  setText('act-type-lbl',     'actType');
+  setText('build-lbl', 'buildLblColon');
+  const mhb = document.getElementById('music-hud-btn');
+  if(mhb) mhb.title = t('musicHint');
+  setText('voice-toggle-lbl', 'voiceToggleLbl');
+  const vhb = document.getElementById('voice-hud-btn');
+  if(vhb) vhb.title = t('voiceHint');
+  if(recognition) recognition.lang = currentLang==='he' ? 'he-IL' : 'en-US';
+  const kbhint = document.getElementById('kb-hint');
+  if(kbhint) kbhint.textContent = kbhint.dataset[isHe?'he':'en'];
+
+  // ── Music style label ──
+  updateMusicStyleLbl();
+  updateChangeCharChip();
+
+  const biCosts = document.querySelectorAll('.bi .b-cost');
+  // These stay numeric — no translation needed
+
+  // Rebuild stages in new language
+  STAGES = buildStages();
+  // Re-run stage badge if in game
+  const badge = document.getElementById('badge-t');
+  if(badge && stageIdx < STAGES.length) badge.textContent = STAGES[stageIdx].title;
+}
+
+// ════════════════════════════════════════════════════════════
+// CHARACTER SYSTEM
+// ════════════════════════════════════════════════════════════
+const CHARACTERS = [
+  {
+    id:'alien',    emoji:'👽',  name:{he:'חייזר קלאסי', en:'Classic Alien'},
+    class:{he:'מאוזן',en:'Balanced'},
+    desc:{he:'החייזר המקורי. מהירות, אנרגיה והגנה מאוזנים. מתאים לכל סגנון שחקן.', en:'The original alien. Balanced speed, energy and defense. Suits every play style.'},
+    stats:{ speed:3, energy:3, shield:3, build:3, luck:3 },
+    color:'#00ff88', glowColor:'#00ff88',
+    bonuses:{he:[], en:[]},
+  },
+  {
+    id:'robot',    emoji:'🤖',  name:{he:'רובוט בנאי',   en:'Builder Bot'},
+    class:{he:'בנאי',en:'Builder'},
+    desc:{he:'בנוי לבנייה. עלות מבנים נמוכה ב-20%, אבל איטי יותר בתנועה.', en:'Built for construction. Buildings cost 20% less, but moves slower.'},
+    stats:{ speed:2, energy:3, shield:2, build:5, luck:3 },
+    color:'#00aaff', glowColor:'#0088ff',
+    bonuses:{he:['🏗️ בנייה -20%','🔧 תיקון חינם'], en:['🏗️ Build cost -20%','🔧 Free repair']},
+    ability: g => { g.up.fastBuild=true; },
+  },
+  {
+    id:'wizard',   emoji:'🧙',  name:{he:'מכשף קוסמי',  en:'Space Wizard'},
+    class:{he:'קוסם',en:'Mage'},
+    desc:{he:'שולט בקרן לייזר. עלות הקרן 4⚡ בלבד. מגן חלש יותר.', en:'Laser beam master. Beam costs only 4⚡. Weaker shield.'},
+    stats:{ speed:3, energy:4, shield:1, build:2, luck:4 },
+    color:'#ff88ff', glowColor:'#cc44ff',
+    bonuses:{he:['🔆 קרן ב-4⚡','⭐ XP +50%'], en:['🔆 Beam costs 4⚡','⭐ XP +50%']},
+    ability: g => { g._beamCost=4; g._xpMult=1.5; },
+  },
+  {
+    id:'knight',   emoji:'🦾',  name:{he:'לוחם גלקטי',  en:'Galactic Knight'},
+    class:{he:'לוחם',en:'Warrior'},
+    desc:{he:'שריון מלא. HP כפול ומגן חזק. איטי בבנייה ואיסוף.', en:'Full armor. Double HP and strong shield. Slow at building and collecting.'},
+    stats:{ speed:2, energy:2, shield:5, build:1, luck:3 },
+    color:'#ff9900', glowColor:'#ff6600',
+    bonuses:{he:['💗 HP כפול','🛡️ מגן -3⚡'], en:['💗 Double HP','🛡️ Shield costs 3⚡']},
+    ability: g => { g.maxHp=200; g.hp=200; g._shieldCost=3; },
+  },
+  {
+    id:'scout',    emoji:'🏃',  name:{he:'סייר מהיר',    en:'Speed Scout'},
+    class:{he:'מהיר',en:'Scout'},
+    desc:{he:'הכי מהיר. אוסף גבישים אוטומטית בטווח רחב. HP נמוך.', en:'Fastest runner. Auto-collects crystals in wide range. Low HP.'},
+    stats:{ speed:5, energy:4, shield:1, build:2, luck:4 },
+    color:'#00ffcc', glowColor:'#00ddaa',
+    bonuses:{he:['🧲 אוטו-אסיפה','⚡ גביש +50%'], en:['🧲 Auto-collect','⚡ Crystal +50%']},
+    ability: g => { g.up.autoCollect=true; g.up.magnet=true; g.maxHp=60; g.hp=60; },
+    mirrorDefault:true, // the 🏃 glyph's built-in art faces left, so mirror it to match facing-right by default
+  },
+  {
+    id:'mystic',   emoji:'🔮',  name:{he:'מיסטיק',       en:'Mystic'},
+    class:{he:'מזל',en:'Lucky'},
+    desc:{he:'כוחות מיסטיים. גבישים שווים פי 2, אירועים מיוחדים מופיעים לעתים קרובות יותר.', en:'Mystical powers. Crystals worth x2, special events appear more often.'},
+    stats:{ speed:3, energy:5, shield:2, build:2, luck:5 },
+    color:'#ffcc00', glowColor:'#ff9900',
+    bonuses:{he:['💎 גביש x2','🌈 אירועים x2'], en:['💎 Crystal x2','🌈 Events x2']},
+    ability: g => { g.up.doubleE=true; g._eventRate=0.5; },
+  },
+  {
+    id:'engineer', emoji:'👷',  name:{he:'מהנדס',         en:'Engineer'},
+    class:{he:'מקצוען',en:'Pro'},
+    desc:{he:'מכיר מכונות. מגדלים ומעבדות מייצרים אנרגיה פסיבית כפולה.', en:'Machine expert. Towers and labs produce double passive energy.'},
+    stats:{ speed:3, energy:3, shield:3, build:4, luck:2 },
+    color:'#ffaa44', glowColor:'#ff8800',
+    bonuses:{he:['🗼 פסיבי x2','🔬 מחקר +30%'], en:['🗼 Passive x2','🔬 Research +30%']},
+    ability: g => { g._passiveMult=2; },
+  },
+];
+
+let selectedChar = CHARACTERS[0];
+
+function buildCharGrid(){
+  const grid = document.getElementById('char-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  CHARACTERS.forEach((ch, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'char-btn' + (ch===selectedChar?' selected':'');
+    btn.innerHTML = `
+      <div class="ch-emoji">${ch.emoji}</div>
+      <div class="ch-name">${ch.name[currentLang]||ch.name.he}</div>
+      <div class="ch-class">${ch.class[currentLang]||ch.class.he}</div>
+      <div class="ch-badge">✓</div>
+    `;
+    btn.style.borderColor = ch===selectedChar ? ch.color : 'rgba(0,245,255,.2)';
+    btn.onclick = () => selectChar(ch);
+    grid.appendChild(btn);
+  });
+  showCharDetails(selectedChar);
+}
+
+function selectChar(ch){
+  selectedChar = ch;
+  buildCharGrid();
+  sfxUI && sfxUI();
+}
+
+function showCharDetails(ch){
+  document.getElementById('char-big').textContent = ch.emoji;
+  document.getElementById('char-big').style.filter = `drop-shadow(0 0 10px ${ch.color})`;
+  document.getElementById('char-info-name').textContent = ch.name[currentLang]||ch.name.he;
+  document.getElementById('char-info-desc').textContent = ch.desc[currentLang]||ch.desc.he;
+
+  const statKeys = ['speed','energy','shield','build','luck'];
+  const statLabels = { speed:t('statsSpeed'), energy:t('statsEnergy'), shield:t('statsShield'), build:t('statsBuild'), luck:t('statsLuck') };
+  const statColors = { speed:'#00f5ff', energy:'#ffd700', shield:'#00ff88', build:'#ff8800', luck:'#ff88ff' };
+
+  const bars = document.getElementById('char-stat-bars');
+  bars.innerHTML = statKeys.map(k => `
+    <div class="stat-bar-label">${statLabels[k]}</div>
+    <div class="stat-bar-track">
+      <div class="stat-bar-fill" style="width:${ch.stats[k]*20}%;background:${statColors[k]};"></div>
+    </div>
+  `).join('');
+
+  const bonuses = (ch.bonuses[currentLang]||ch.bonuses.he||[]);
+  document.getElementById('char-bonus-tags').innerHTML = bonuses.map(b =>
+    `<span class="char-bonus-tag">${b}</span>`
+  ).join('');
+}
+
+function showCharSelect(){
+  buildCharGrid();
+  applyLang();
+  document.getElementById('s-char').classList.add('show');
+}
+
+function confirmCharacter(){
+  document.getElementById('s-char').classList.remove('show');
+  if(typeof AC !== 'undefined' && AC) { try{ sfxUI(); }catch(e){} }
+  showCharPickSplash();
+}
+
+// Brief zoom-in splash celebrating the chosen character, then reveal mode select.
+function showCharPickSplash(){
+  const ch = selectedChar || CHARACTERS[0];
+  const el = document.getElementById('char-splash');
+  const emojiEl = document.getElementById('cs-emoji');
+  const nameEl = document.getElementById('cs-name');
+  const classEl = document.getElementById('cs-class');
+  emojiEl.textContent = ch.emoji;
+  emojiEl.style.color = ch.glowColor || ch.color || '#00f5ff';
+  nameEl.textContent = (ch.name && (ch.name[currentLang]||ch.name.he)) || '';
+  classEl.textContent = (ch.class && (ch.class[currentLang]||ch.class.he)) || '';
+  // restart the pop animation each time
+  emojiEl.style.animation='none'; nameEl.style.animation='none'; classEl.style.animation='none';
+  void el.offsetWidth; // force reflow
+  emojiEl.style.animation=''; nameEl.style.animation=''; classEl.style.animation='';
+  el.classList.add('show');
+  setTimeout(()=>{
+    el.classList.remove('show');
+    showIntro();
+  }, 1100);
+}
+
+function showIntro(){
+  const el = document.getElementById('s-intro');
+  if(el) el.classList.remove('off');
+  // Set leaderboard
+  const lb = document.getElementById('lb-intro');
+  if(lb) lb.innerHTML = lbHTML(lbLoad());
+  // Update co-op label
+  const lbl = document.getElementById('coop-lbl');
+  if(lbl) lbl.textContent = t(coopMode?'coopOn':'coopOff');
+  updateChangeCharChip();
+}
+// Reflect the currently-selected character on the mode-select screen's chip.
+function updateChangeCharChip(){
+  const ch = selectedChar || CHARACTERS[0];
+  const e = document.getElementById('change-char-emoji');
+  const n = document.getElementById('change-char-name');
+  if(e) e.textContent = ch.emoji;
+  if(n) n.textContent = (ch.name && (ch.name[currentLang]||ch.name.he)) || '';
+}
+
+// Apply selected char bonuses in resetAll
+function applyCharacterBonuses(){
+  if(!selectedChar || !selectedChar.ability) return;
+  selectedChar.ability(G);
+}
+
+// ════════════════════════════════════════════════════════════
+// SPLASH SCREEN
+// ════════════════════════════════════════════════════════════
+function runSplash(){
+  const bar = document.getElementById('splash-bar');
+  const hint = document.getElementById('splash-hint');
+  const splash = document.getElementById('s-splash');
+  if(!splash) { showCharSelect(); return; }
+
+  const msgs = ['splashMsg0','splashMsg1','splashMsg2','splashMsg3'];
+  let pct = 0;
+  const step = () => {
+    pct += Math.random()*18 + 6;
+    if(pct > 100) pct = 100;
+    if(bar) bar.style.width = pct+'%';
+    const mi = Math.floor((pct/100)*(msgs.length-1));
+    if(hint) hint.textContent = t(msgs[mi]);
+    if(pct < 100){
+      setTimeout(step, 120 + Math.random()*180);
+    } else {
+      setTimeout(()=>{
+        if(splash) splash.classList.add('off');
+        showCharSelect();
+      }, 400);
+    }
+  };
+  setTimeout(step, 200);
+}
+
+let G={},P={},P2={}; // P2 declared here so resetAll can always reference it
 let crystals=[],buildings=[],meteors=[],particles=[],craters=[],companion=null,lightningBolts=[];
 let buildIdx=0,stageIdx=0,stageActive=false,gameMode='campaign';
 let keys={},touch={};
@@ -1199,15 +2215,16 @@ const SHOW_TOUCH=hasTouchPoints||!hasFinePointer;
 // ════════════════════════════════════════════════════════════
 // SHOP
 // ════════════════════════════════════════════════════════════
-function openShop(sub='בחר פריט'){
+function openShop(sub){
+  if(sub===undefined) sub = t('shopChooseItem');
   G.paused=true;_shopOpen=true;
   document.getElementById('shop-sub').textContent=sub+' — ⚡'+Math.floor(G.energy);
   const cont=document.getElementById('shop-items');cont.innerHTML='';
   [...SHOP_ITEMS].sort(()=>Math.random()-.5).slice(0,4).forEach(item=>{
     const div=document.createElement('div');
     div.className='shop-item'+(item.free||G.energy>=item.price?'':' sold');
-    div.innerHTML=`<div class="si-ico">${item.ico}</div><div class="si-info"><div class="si-name">${item.name}</div><div class="si-desc">${item.desc}</div></div><div class="si-price">${item.free?'חינם':item.price+'⚡'}</div>`;
-    if(item.free||G.energy>=item.price){div.onclick=()=>{if(!item.free)G.energy-=item.price;item.fn();sfxShop();haptic(40);closeShop();updateHUD();toast('✅ '+item.name);};}
+    div.innerHTML=`<div class="si-ico">${item.ico}</div><div class="si-info"><div class="si-name">${tt(item.name)}</div><div class="si-desc">${tt(item.desc)}</div></div><div class="si-price">${item.free?t('freeLabel'):item.price+'⚡'}</div>`;
+    if(item.free||G.energy>=item.price){div.onclick=()=>{if(!item.free)G.energy-=item.price;item.fn();sfxShop();haptic(40);closeShop();updateHUD();toast('✅ '+tt(item.name));};}
     cont.appendChild(div);
   });
   document.getElementById('shop-screen').classList.add('show');
@@ -1221,7 +2238,7 @@ function triggerSpecial(){
   if(_specialEv)return;
   const ev=pick(SPECIAL_EVENTS);_specialEv=ev;_specialEvT=ev.dur;ev.fn();haptic(60);
   const el=document.getElementById('special-event');
-  el.innerHTML=`<div class="se-ico">${ev.ico}</div><div class="se-title">${ev.title}</div><div class="se-desc">${ev.desc}</div><div class="se-timer" id="se-timer">${ev.dur}s</div>`;
+  el.innerHTML=`<div class="se-ico">${ev.ico}</div><div class="se-title">${tt(ev.title)}</div><div class="se-desc">${tt(ev.desc)}</div><div class="se-timer" id="se-timer">${ev.dur}s</div>`;
   el.style.display='block';sfx(880,.15,'sine',.1,1.5);
   setTimeout(()=>{if(el.style.display!=='none')el.style.display='none';},ev.dur*1000+500);
 }
@@ -1237,16 +2254,16 @@ function tickSpecial(dt){
 // ════════════════════════════════════════════════════════════
 function openBldPopup(b,sx,sy){
   _bldTarget=b;
-  document.getElementById('bpt').textContent=b.emoji+' '+b.name+' (★'+(b.level||1)+')';
+  document.getElementById('bpt').textContent=b.emoji+' '+tt(BUILD_DATA[b.type].name)+' (★'+(b.level||1)+')';
   const upCost=Math.floor(BUILD_DATA[b.type].cost*((b.level||1)+1)*.6);
   const bpUp=document.getElementById('bp-upgrade');
-  bpUp.innerHTML=`🔼 שדרג <span class="bpb-cost">${upCost}⚡</span>`;
+  bpUp.innerHTML=`🔼 ${t('bpUpgrade')} <span class="bpb-cost">${upCost}⚡</span>`;
   bpUp.onclick=()=>{if(G.energy<upCost){toast('❌ אין מספיק');return;}G.energy-=upCost;b.level=(b.level||1)+1;b.pop+=Math.floor(BUILD_DATA[b.type].pop*.5);G.pop+=Math.floor(BUILD_DATA[b.type].pop*.5);b.damage=0;burst(b.wx,b.y-b.ph/2,'#ffd700',16,5);sfxBuild();haptic(40);closeBldPopup();updateHUD();toast('⬆️ שודרג!');};
   const bpRep=document.getElementById('bp-repair');
   if(b.damage>0){bpRep.style.display='block';bpRep.innerHTML='🔧 תקן <span class="bpb-cost">15⚡</span>';bpRep.onclick=()=>{if(G.energy<15){toast('❌ אין מספיק');return;}G.energy-=15;b.damage=0;sfxBuild();haptic(30);closeBldPopup();toast('🔧 תוקן!');};}else bpRep.style.display='none';
   const sv=Math.floor(BUILD_DATA[b.type].cost*.4);
   const bpSell=document.getElementById('bp-sell');
-  bpSell.innerHTML=`💰 מכור <span class="bpb-cost">+${sv}⚡</span>`;
+  bpSell.innerHTML=`💰 ${t('bpSell')} <span class="bpb-cost">+${sv}⚡</span>`;
   bpSell.onclick=()=>{G.energy+=sv;G.homes--;G.pop-=b.pop;buildings=buildings.filter(x=>x!==b);burst(b.wx,b.y-b.ph/2,'#ffd700',12,4);sfxUI();haptic(30);closeBldPopup();updateHUD();toast('💰 נמכר +'+sv+'⚡');};
   const popup=document.getElementById('bld-popup');
   popup.style.left=clamp(sx-90,8,W-200)+'px';popup.style.top=clamp(sy-160,50,H-220)+'px';
@@ -1259,6 +2276,7 @@ function closeBldPopup(){document.getElementById('bld-popup').style.display='non
 // ════════════════════════════════════════════════════════════
 function toIntro(){
   ['s-over','s-victory','s-pause'].forEach(id=>document.getElementById(id).classList.add('off'));
+  document.getElementById('s-char').classList.remove('show');
   document.getElementById('s-intro').classList.remove('off');
   document.getElementById('stage-screen').classList.remove('show');
   document.getElementById('shop-screen').classList.remove('show');
@@ -1266,17 +2284,33 @@ function toIntro(){
   document.getElementById('special-event').style.display='none';
   showUI(false);G.running=false;
   document.getElementById('lb-intro').innerHTML=lbHTML(lbLoad());
+  // Update char toggle label if coop changed
+  const lbl=document.getElementById('coop-lbl');
+  if(lbl)lbl.textContent=t(coopMode?'coopOn':'coopOff');
 }
 function startGame(mode){
   window._lastMode=mode;gameMode=mode;initAudio();
   document.getElementById('s-intro').classList.add('off');
+  // Close any overlay (pause / game-over / victory) that this call may have
+  // originated from — otherwise it stays on top of the fresh game and blocks
+  // all further input.
+  ['s-over','s-victory','s-pause'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('off');});
   showUI(true);resetAll();
+  if(voiceEnabled) startVoiceRecognition();
 }
 function showUI(show){
-  const dispMap={hud:'block','xp-wrap':'block',minimap:'block',daymeter:'flex','stage-badge':'block',objectives:'block'};
-  ['hud','xp-wrap','minimap','daymeter','stage-badge','objectives'].forEach(id=>{
-    const el=document.getElementById(id);if(!el)return;el.style.display=show?dispMap[id]:'none';
+  // NOTE: each of these elements defaults to `display:none` in CSS, so
+  // clearing the inline style (style.display='') falls back to that CSS
+  // default instead of showing them. We must set an explicit "shown" value
+  // per element's intended layout, not an empty string.
+  const shownDisplay = {hud:'block', 'xp-wrap':'block', minimap:'block', daymeter:'flex'};
+  ['hud','xp-wrap','minimap','daymeter'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.style.display=show?shownDisplay[id]:'none';
   });
+  // stage-badge / objectives are campaign-stage-specific: beginStage() shows
+  // them once the actual stage starts. On stop, hide them here too.
+  if(!show){['stage-badge','objectives'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});}
   const dpad=document.getElementById('dpad');
   const actions=document.getElementById('actions');
   const bpanel=document.getElementById('build-panel');
@@ -1287,24 +2321,29 @@ function showUI(show){
   if(SHOW_TOUCH){if(dpad)dpad.style.display='flex';if(kbhint)kbhint.style.display='none';}
   else{if(dpad)dpad.style.display='none';if(kbhint)kbhint.style.display='block';}
   const mhb=document.getElementById('music-hud-btn');
-  if(mhb)mhb.style.display=show?'block':'none';
+  if(mhb)mhb.style.display=show?'inline-block':'none';
+  const vhb=document.getElementById('voice-hud-btn');
+  if(vhb)vhb.style.display=show?'inline-block':'none';
+  if(!show) stopVoiceRecognition(); // don't keep the mic listening on menus/game-over
 }
 function resetAll(){
-  G={running:true,paused:false,over:false,energy:20,hp:100,maxHp:100,homes:0,pop:0,score:0,level:1,xp:0,xpNext:100,time:0,dayPhase:0,passiveT:0,regenT:0,shieldOn:false,shieldT:0,beamOn:false,beamT:0,combo:0,comboT:0,lastCollect:0,weatherEv:null,meteorRate:.004,up:{doubleE:false,fastBuild:false,superShield:false,autoCollect:false,companion:false,magnet:false,jetpack:false,bossKiller:false,regen:false},_totalE:0,_waveT:0,_bossKills:0,_bossMode:false,_waveMode:false,_bossSpawnT:999,_crystalMult:1,_quaking:false,_windfall:false,_powerDown:false,_eventT:0};
+  G={running:true,paused:false,over:false,energy:20,hp:100,maxHp:100,_passiveMult:1,_beamCost:8,_shieldCost:5,_xpMult:1,_eventRate:1,homes:0,pop:0,score:0,level:1,xp:0,xpNext:100,time:0,dayPhase:0,passiveT:0,regenT:0,shieldOn:false,shieldT:0,beamOn:false,beamT:0,combo:0,comboT:0,lastCollect:0,weatherEv:null,meteorRate:.004,up:{doubleE:false,fastBuild:false,superShield:false,autoCollect:false,companion:false,magnet:false,jetpack:false,bossKiller:false,regen:false},_totalE:0,_waveT:0,_bossKills:0,_bossMode:false,_waveMode:false,_bossSpawnT:999,_crystalMult:1,_quaking:false,_windfall:false,_powerDown:false,_eventT:0};
   const ww=worldW()||W*3;
-  P={wx:ww/2,y:GY-40,vy:0,onGround:true,dir:1,invT:0,hit:false,jetOn:false};
-  crystals=[];buildings=[];meteors=[];particles=[];craters=[];companion=null;lightningBolts=[];
+  P={wx:ww/2-80,y:GY-40,vy:0,onGround:true,dir:1,invT:0,hit:false,jetOn:false};
+  P2={wx:ww/2+80,y:GY-40,vy:0,onGround:true,dir:-1,invT:0,hit:false,jetOn:false,active:coopMode};
+  crystals=[];buildings=[];meteors=[];particles=[];craters=[];companion=null;lightningBolts=[];powerups=[];_nextPowerupT=30;bossWaveActive=false;bossWaveT=0;
   buildIdx=0;stageIdx=0;stageActive=false;camX=0;shakeX=shakeY=shakeTimer=0;
   _bldTarget=null;_shopOpen=false;_specialEv=null;_specialEvT=0;
   document.getElementById('bld-popup').style.display='none';
   document.getElementById('special-event').style.display='none';
+  applyCharacterBonuses();
   initBg();buildTerrain();spawnCrystals(14);
   updateHUD();updateBuildPanel();updateCycleBtn();
   if(gameMode==='campaign')setTimeout(()=>showStageScreen(0),300);
   else{stageActive=true;toast('🌌 מצב חופשי!');}
   if(!rafId)loop();
 }
-function spawnCrystals(n){const ww=worldW()||W*3;for(let i=0;i<n;i++){const wx=rnd(60,ww-60);crystals.push({wx,y:groundAt(wx)-14,r:rnd(7,13),color:pick(COLORS),pulse:rnd(0,6.28),floatY:rnd(0,6.28),val:irnd(1,3)});}}
+function spawnCrystals(n){const ww=worldW()||W*3;for(let i=0;i<n;i++){const wx=rnd(60,ww-60);const tc=currentTheme();crystals.push({wx,y:groundAt(wx)-14,r:rnd(7,13),color:pick(tc.crystalColors||COLORS),pulse:rnd(0,6.28),floatY:rnd(0,6.28),val:irnd(1,3)});}}
 function spawnMeteor(big=false){const ww=worldW()||W*3;const r=big?rnd(28,44):rnd(8,18)+G.level*1.1;const wx=clamp(P.wx+rnd(-W*.45,W*.45),r,ww-r);meteors.push({wx,y:-r-10,vx:rnd(-2.2,2.2),vy:rnd(2,3.8)+G.level*.32,r,trail:[],isBoss:big,hp:big?3:1,glowP:0});}
 function spawnCompanion(){companion={wx:P.wx+50,y:P.y,phase:0};}
 
@@ -1313,14 +2352,14 @@ function spawnCompanion(){companion={wx:P.wx+50,y:P.y,phase:0};}
 // ════════════════════════════════════════════════════════════
 function doBuild(){
   const bd=BUILD_DATA[buildIdx];const cost=Math.floor(bd.cost*(G.up.fastBuild?.7:1));
-  if(G.energy<cost){toast('❌ צריך '+cost+'⚡ לבנות '+bd.name);haptic(55);return;}
-  for(const b of buildings){if(Math.abs(b.wx-P.wx)<b.pw+12){toast('❌ מקום תפוס!');haptic(40);return;}}
+  if(G.energy<cost){toast(t('buildNoEnergy')+' '+cost+'⚡ '+t('buildPlace')+' '+tt(bd.name));haptic(55);return;}
+  for(const b of buildings){if(Math.abs(b.wx-P.wx)<b.pw+12){toast(t('buildOccupied'));haptic(40);return;}}
   G.energy-=cost;const gnd=groundAt(P.wx);
   buildings.push({wx:P.wx,y:gnd,type:buildIdx,emoji:bd.emoji,name:bd.name,pop:bd.pop,pw:bd.pw,ph:bd.ph,col:bd.col,buildP:0,damage:0,lightP:rnd(0,6.28),level:1});
   G.homes++;G.pop+=bd.pop;G.score+=bd.cost*2;G.xp+=bd.xpg;
   burst(P.wx,gnd-bd.ph/2,bd.col,20,5);sfxBuild();haptic(50);
   spop(wtW(P.wx),P.y-24,'🏗️ +'+bd.pop+'👽',bd.col);
-  toast('✅ '+bd.name+' נבנה!');updateHUD();updateBuildPanel();checkLvl();
+  toast('✅ '+tt(bd.name)+' '+t('builtSuffix'));updateHUD();updateBuildPanel();checkLvl();
 }
 function doCollect(){
   let got=false;
@@ -1329,22 +2368,22 @@ function doCollect(){
       const now=G.time,dt=now-G.lastCollect;
       G.combo=dt<1.9?Math.min(G.combo+1,12):1;G.lastCollect=now;G.comboT=2.2;
       const mult=G.combo*(G.up.doubleE?2:1)*(G._crystalMult||1);
-      const val=c.val*mult;G.energy+=val;G.score+=val;G.xp+=5;G._totalE+=val;
+      const val=c.val*mult;G.energy+=val;G.score+=val;G.xp+=Math.round(5*(G._xpMult||1));G._totalE+=val;
       burst(c.wx,c.y,c.color,10,3);sfxCollect(G.combo);haptic(18);
       spop(wtW(c.wx),c.y,'+'+Math.floor(val)+'⚡',c.color);got=true;return false;
     }return true;
   });
   if(got){if(crystals.length<8)spawnCrystals(5);updateHUD();checkLvl();}
-  else toast('💎 התקרב לגביש!');
+  else toast(t('collectNear'));
 }
-function doShield(){if(G.energy<5){toast('❌ 5⚡ למגן');return;}G.energy-=5;G.shieldOn=true;G.shieldT=G.up.superShield?300:100;burst(P.wx,P.y-10,'#00eeff',16,4);sfxShield();haptic(30);toast('🛡️ מגן!');updateHUD();}
-function doBeam(){if(G.energy<8){toast('❌ 8⚡ לקרן');return;}G.energy-=8;G.beamOn=true;G.beamT=50;sfxBeam();haptic(40);updateHUD();}
+function doShield(){const sc=G._shieldCost||5;if(G.energy<sc){toast('❌ '+sc+'⚡ '+t('shieldLow').replace('❌ ',''));return;}G.energy-=sc;G.shieldOn=true;G.shieldT=G.up.superShield?300:100;burst(P.wx,P.y-10,'#00eeff',16,4);sfxShield();haptic(30);toast(t('shieldOn'));updateHUD();}
+function doBeam(){const bc=G._beamCost||8;if(G.energy<bc){toast('❌ '+bc+'⚡ לקרן');return;}G.energy-=bc;G.beamOn=true;G.beamT=50;sfxBeam();haptic(40);updateHUD();}
 function doLightning(){
   if(G.energy<10){toast('❌ 10⚡ לברק');return;}G.energy-=10;sfxLightning();haptic(55);
   const hit=meteors.filter(m=>Math.hypot(m.wx-P.wx,m.y-P.y)<180);
   hit.forEach(m=>{m.hp-=G.up.bossKiller?999:1;lightningBolts.push({x1:wtW(P.wx),y1:P.y,x2:wtW(m.wx),y2:m.y,life:12});if(m.hp<=0){burst(m.wx,m.y,'#bf5fff',18,7);if(m.isBoss){G._bossKills++;G._bossSpawnT=9;spop(wtW(m.wx),m.y,'💥 BOSS!','#ff00ff');}G.score+=m.isBoss?55:8;G.xp+=m.isBoss?30:10;}});
   meteors=meteors.filter(m=>m.hp>0);if(hit.length)screenShake(8,16);
-  else{burst(P.wx,P.y,'#bf5fff',10,4);toast('⚡ אין מטאורים בטווח!');}
+  else{burst(P.wx,P.y,'#bf5fff',10,4);toast(t('lightningNoTarget'));}
   updateHUD();checkLvl();
 }
 
@@ -1366,18 +2405,18 @@ function checkLvl(){if(G.xp>=G.xpNext){G.xp-=G.xpNext;G.level++;G.xpNext=Math.fl
 function showLevelUp(){
   G.paused=true;
   const avail=UPGRADES.filter(u=>!G.up[u.id]).sort(()=>Math.random()-.5).slice(0,3);
-  document.getElementById('lu-sub').textContent='רמה '+G.level+' — בחר שדרוג:';
+  document.getElementById('lu-sub').textContent=t('hudLevel')+' '+G.level+' — '+t('levelUpSub');
   const ch=document.getElementById('lu-choices');ch.innerHTML='';
   if(!avail.length)avail.push({id:'__b',name:'💫 +100⚡',desc:'כל השדרוגים פעילים!',ico:'💫'});
-  avail.forEach(u=>{const btn=document.createElement('button');btn.className='lu-opt';btn.innerHTML=`<div class="lu-ico">${u.ico}</div><div><div class="lu-name">${u.name}</div><div class="lu-desc">${u.desc}</div></div>`;btn.onclick=()=>{if(u.id==='__b')G.energy+=100;else{G.up[u.id]=true;if(u.id==='companion')spawnCompanion();}document.getElementById('levelup').classList.remove('show');G.paused=false;updateHUD();toast('✅ '+u.name);};ch.appendChild(btn);});
+  avail.forEach(u=>{const btn=document.createElement('button');btn.className='lu-opt';btn.innerHTML=`<div class="lu-ico">${u.ico}</div><div><div class="lu-name">${tt(u.name)}</div><div class="lu-desc">${tt(u.desc)}</div></div>`;btn.onclick=()=>{if(u.id==='__b')G.energy+=100;else{G.up[u.id]=true;if(u.id==='companion')spawnCompanion();}document.getElementById('levelup').classList.remove('show');G.paused=false;updateHUD();toast('✅ '+tt(u.name));};ch.appendChild(btn);});
   document.getElementById('levelup').classList.add('show');
 }
 
 // ════════════════════════════════════════════════════════════
 // WEATHER
 // ════════════════════════════════════════════════════════════
-const WEATHER_EVTS=[{id:'storm',lbl:'🌠 סערת מטאורים!',dur:15,rate:.055},{id:'crystalRain',lbl:'💎 גשם גבישים!',dur:10,rate:0},{id:'boss',lbl:'👹 בוס מתקרב!',dur:20,rate:0}];
-function triggerWeather(){if(G.weatherEv)return;const ev=pick(WEATHER_EVTS);G.weatherEv=ev;document.getElementById('weather').style.opacity='1';document.getElementById('weather').textContent='⚠ '+ev.lbl;haptic(70);if(ev.id==='boss')spawnMeteor(true);setTimeout(()=>{document.getElementById('weather').style.opacity='0';G.weatherEv=null;},ev.dur*1000);}
+const WEATHER_EVTS=[{id:'storm',lbl:{he:'🌠 סערת מטאורים!',en:'🌠 Meteor Storm!'},dur:15,rate:.055},{id:'crystalRain',lbl:{he:'💎 גשם גבישים!',en:'💎 Crystal Rain!'},dur:10,rate:0},{id:'boss',lbl:{he:'👹 בוס מתקרב!',en:'👹 Boss Approaching!'},dur:20,rate:0}];
+function triggerWeather(){if(G.weatherEv)return;const ev=pick(WEATHER_EVTS);G.weatherEv=ev;document.getElementById('weather').style.opacity='1';document.getElementById('weather').textContent='⚠ '+tt(ev.lbl);haptic(70);if(ev.id==='boss')spawnMeteor(true);setTimeout(()=>{document.getElementById('weather').style.opacity='0';G.weatherEv=null;},ev.dur*1000);}
 function tickWeather(dt){if(!G.weatherEv)return;if(G.weatherEv.id==='storm'&&Math.random()<G.weatherEv.rate)spawnMeteor();if(G.weatherEv.id==='crystalRain'&&Math.random()<.08){const ww=worldW()||W*3;const wx=rnd(40,ww-40);crystals.push({wx,y:-20,r:rnd(8,14),color:pick(COLORS),pulse:0,floatY:0,val:irnd(2,5),falling:true,vy:rnd(2,4)});}}
 
 // ════════════════════════════════════════════════════════════
@@ -1409,18 +2448,20 @@ function beginStage(){
 function updateObjectives(){const s=STAGES[stageIdx],list=document.getElementById('obj-list');list.innerHTML='';s.goals.forEach(g=>{const done=g.check();const d=document.createElement('div');d.className='obj-row'+(done?' done':'');d.innerHTML=`<span class="obj-ico">${done?'✅':g.ico}</span><span>${g.text}</span>`;list.appendChild(d);});}
 function checkStageComplete(){if(!stageActive||gameMode!=='campaign')return;if(STAGES[stageIdx].goals.every(g=>g.check()))stageComplete();}
 function stageComplete(){
-  stageActive=false;screenShake(13,32);burst(P.wx,P.y,'#ffd700',38,8);sfxLvl();
+  if(!bossWaveActive&&bossWaveT===0){stageActive=false;startBossWave();return;}
+  bossWaveT=0;
+  screenShake(13,32);burst(P.wx,P.y,'#ffd700',38,8);sfxLvl();
   G.score+=240+stageIdx*110;updateHUD();
   const s=STAGES[stageIdx];
   setTimeout(()=>{if(s.rewardFn)s.rewardFn();},500);
   if(!s.isFinal)setTimeout(()=>{stageIdx++;if(stageIdx<STAGES.length)showStageScreen(stageIdx);else showVictory();},s.rewardFn?2000:1400);
-  toast('🎉 שלב '+s.num+' הושלם!');
+  toast(t('stageComplete')+' '+s.num);
 }
 function gameOver(reason){
   if(G.over)return;G.running=false;G.over=true;
   const lb=lbAdd(G.score,G.level,stageIdx+1,gameMode,playerName());
   document.getElementById('os-score').textContent=G.score;document.getElementById('os-level').textContent=G.level;document.getElementById('os-time').textContent=Math.floor(G.time);
-  document.getElementById('over-reason').textContent=reason||'הציוויליזציה קרסה';
+  document.getElementById('over-reason').textContent=reason||t('overReason');
   document.getElementById('lb-over').innerHTML=lbHTML(lb);
   showUI(false);document.getElementById('s-over').classList.remove('off');
 }
@@ -1447,7 +2488,26 @@ function updateHUD(){
   document.getElementById('xp-fill').style.width=(G.xp/G.xpNext*100)+'%';
   document.getElementById('xp-c').textContent=G.xp;document.getElementById('xp-m').textContent=G.xpNext;document.getElementById('xp-l').textContent=G.level;
   const night=nightF();document.getElementById('day-fill').style.height=(night*100)+'%';document.getElementById('day-fill').style.background=night>.5?'#3355ff':'#ffcc00';document.getElementById('day-lbl').textContent=night>.5?'🌙':'☀️';
-  document.getElementById('combo').style.opacity=G.combo>1?'1':'0';if(G.combo>1)document.getElementById('combo-x').textContent='x'+G.combo;
+  const comboEl=document.getElementById('combo');
+  const comboX=document.getElementById('combo-x');
+  const comboFlash=document.getElementById('combo-flash');
+  if(G.combo>1){
+    comboEl.style.opacity='1';
+    if(comboX)comboX.textContent='x'+G.combo;
+    comboEl.className='';
+    if(G.combo>=10)comboEl.classList.add('c10');
+    else if(G.combo>=8)comboEl.classList.add('c8');
+    else if(G.combo>=6)comboEl.classList.add('c6');
+    else if(G.combo>=4)comboEl.classList.add('c4');
+    else comboEl.classList.add('c2');
+    if(comboFlash&&[3,5,8,10,12].includes(G.combo)){
+      const fc={3:'rgba(255,200,0,.08)',5:'rgba(255,100,0,.1)',8:'rgba(255,0,200,.12)',10:'rgba(0,255,255,.14)',12:'rgba(255,255,255,.18)'};
+      comboFlash.style.background=fc[G.combo]||'rgba(255,200,0,.08)';
+      comboFlash.style.opacity='1';
+      setTimeout(()=>{if(comboFlash)comboFlash.style.opacity='0';},180);
+    }
+    if(comboX){comboX.style.animation='none';void comboX.offsetWidth;comboX.style.animation='comboPop .2s ease-out';}
+  } else comboEl.style.opacity='0';
   document.getElementById('stat-hp').classList.toggle('hp-low',G.hp<30);
   document.getElementById('stat-energy').classList.toggle('ew',G.energy<10);
   const wt=document.getElementById('wave-timer');
@@ -1482,12 +2542,96 @@ function drawMinimap(){
 // ════════════════════════════════════════════════════════════
 // MAIN LOOP
 // ════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// POWER-UP DROPS
+// ══════════════════════════════════════════════════════════════
+let powerups=[];
+let _nextPowerupT=30;
+const POWERUP_TYPES=[
+  {id:'shield', emoji:'🛡️',label:'מגן!',    color:'#00eeff',fn:()=>{G.shieldOn=true;G.shieldT=200;sfxShield();}},
+  {id:'energy', emoji:'⚡', label:'+30⚡',    color:'#ffd700',fn:()=>{G.energy+=30;}},
+  {id:'freeze', emoji:'❄️', label:'הקפאה!',  color:'#aaeeff',fn:()=>{meteors.forEach(m=>{m.vx*=.1;m.vy*=.1;});setTimeout(()=>meteors.forEach(m=>{m.vx*=10;m.vy*=10;}),3000);}},
+  {id:'beam',   emoji:'🔆', label:'קרן!',    color:'#ffff00',fn:()=>{G.beamOn=true;G.beamT=120;sfxBeam();}},
+  {id:'hp',     emoji:'💊', label:'חיים!',   color:'#ff88aa',fn:()=>{G.hp=Math.min(G.maxHp,G.hp+30);}},
+  {id:'score',  emoji:'🌟', label:'+100!',   color:'#ffcc00',fn:()=>{G.score+=100;G.xp+=20;checkLvl();}},
+  {id:'magnet2',emoji:'🧲', label:'מגנט!',   color:'#aa88ff',fn:()=>{G.up.magnet=true;toast('🧲 מגנט!');}},
+  {id:'tele',   emoji:'🌀', label:'טלפורט!', color:'#ff44ff',fn:()=>{P.wx=rnd(100,worldW()-100);burst(P.wx,P.y,'#ff44ff',20,6);}},
+];
+function spawnPowerup(){
+  const ww=worldW()||W*3;const type=pick(POWERUP_TYPES);
+  powerups.push({wx:clamp(P.wx+rnd(-W*.4,W*.4),60,ww-60),y:-30,vy:rnd(1.5,2.8),type,r:18,pulse:rnd(0,6.28),landed:false,life:1,landedT:0});
+}
+function applyPowerup(pu){
+  pu.type.fn();haptic(60);burst(pu.wx,pu.y,pu.type.color,20,6);
+  spop(wtW(pu.wx),pu.y-20,pu.type.emoji+' '+pu.type.label,pu.type.color);
+  sfx(880,.15,'sine',.1,1.5);updateHUD();
+}
+function tickPowerups(dt){
+  if(G.time>_nextPowerupT){spawnPowerup();_nextPowerupT=G.time+rnd(45,75);sfx(660,.1,'sine',.06,1.3);}
+  powerups=powerups.filter(pu=>{
+    pu.pulse+=dt*3;
+    if(!pu.landed){
+      pu.y+=pu.vy;
+      const gnd=groundAt(pu.wx)-pu.r;
+      if(pu.y>=gnd){pu.y=gnd;pu.landed=true;pu.landedT=G.time;burst(pu.wx,pu.y,pu.type.color,12,4);}
+      if(Math.hypot(pu.wx-P.wx,pu.y-P.y)<pu.r+24){applyPowerup(pu);return false;}
+      if(coopMode&&P2.active&&Math.hypot(pu.wx-P2.wx,pu.y-P2.y)<pu.r+24){applyPowerup(pu);return false;}
+    } else {
+      const age=G.time-pu.landedT;pu.life=clamp(1-(age-5)/3,0,1);
+      if(age>8)return false;
+      if(Math.hypot(pu.wx-P.wx,pu.y-P.y)<pu.r+28){applyPowerup(pu);return false;}
+      if(coopMode&&P2.active&&Math.hypot(pu.wx-P2.wx,pu.y-P2.y)<pu.r+28){applyPowerup(pu);return false;}
+    }
+    return true;
+  });
+}
+function drawPowerups(){
+  powerups.forEach(pu=>{
+    const scx=wtW(pu.wx);if(scx<-40||scx>W+40)return;
+    const bob=Math.sin(pu.pulse)*5;
+    ctx.save();ctx.globalAlpha=pu.life;ctx.translate(scx,pu.y+bob);
+    ctx.shadowBlur=20;ctx.shadowColor=pu.type.color;
+    ctx.beginPath();ctx.arc(0,0,pu.r+4,0,Math.PI*2);ctx.fillStyle=pu.type.color+'33';ctx.fill();
+    const rr=pu.r+8+Math.sin(pu.pulse)*4;ctx.strokeStyle=pu.type.color+'88';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);ctx.stroke();
+    ctx.shadowBlur=0;ctx.fillStyle='#ffffff';ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pu.type.emoji,0,0);
+    ctx.font='bold 8px Orbitron,monospace';ctx.fillStyle=pu.type.color;ctx.fillText(pu.type.label,0,pu.r+14);
+    ctx.restore();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// BOSS WAVE
+// ══════════════════════════════════════════════════════════════
+let bossWaveActive=false,bossWaveT=0;
+const BOSS_WAVE_DUR=20;
+function startBossWave(){
+  bossWaveActive=true;bossWaveT=0;meteors=[];
+  toast(t('bossWaveStart'));haptic(100);
+  sfx(200,.5,'sawtooth',.15,.3);screenShake(12,25);
+}
+function tickBossWave(dt){
+  if(!bossWaveActive)return;
+  bossWaveT+=dt;
+  const intens=bossWaveT/BOSS_WAVE_DUR;
+  if(Math.random()<.04+intens*.12)spawnMeteor(Math.random()<intens*.4);
+  const wt=document.getElementById('wave-timer');
+  if(wt){const rem=Math.ceil(BOSS_WAVE_DUR-bossWaveT);wt.style.display='block';wt.textContent='🔥 '+rem+'s';wt.style.color=rem<5?'#ff2200':rem<10?'#ff6600':'#ff9900';}
+  if(bossWaveT>=BOSS_WAVE_DUR){
+    bossWaveActive=false;meteors=[];
+    const wt2=document.getElementById('wave-timer');if(wt2)wt2.style.display='none';
+    for(let i=0;i<6;i++)setTimeout(()=>{burst(rnd(W*.1,W*.9),rnd(H*.1,H*.5),pick(['#ffd700','#00ff88','#00f5ff','#ff88ff']),20,7);sfx(rnd(600,1200),.15,'sine',.08,1.5);},i*200);
+    toast(t('bossWaveEnd'));
+    setTimeout(stageComplete,1500);
+  }
+}
+
 function loop(ts=0){
   rafId=requestAnimationFrame(loop);
   const dt=Math.min((ts-lastTs)/1000,.05);lastTs=ts;
   if(!G.running||G.paused)return;
   G.time+=dt;G.dayPhase+=dt*.05;G._eventT=(G._eventT||0)+dt;
-  if(G._eventT>=120){G._eventT=0;if(Math.random()<.65)triggerSpecial();}
+  if(G._eventT>=120/(G._eventRate||1)){G._eventT=0;if(Math.random()<.65)triggerSpecial();}
   tickSpecial(dt);
   if(Math.floor(G.time)%28===0&&Math.floor(G.time)!==Math.floor(G.time-dt)&&Math.random()<.38)triggerWeather();
   tickWeather(dt);
@@ -1508,11 +2652,27 @@ function loop(ts=0){
   if(jumpK){if(P.onGround){P.vy=-13;P.onGround=false;sfx(200,.1,'sine',.07,2);}else if(G.up.jetpack){P.vy=Math.max(P.vy-.8,-10);P.jetOn=true;burst(P.wx,P.y+14,'#ff8800',2,2);}}else P.jetOn=false;
   P.vy=Math.min(P.vy+.55,18);P.y+=P.vy;
   const gnd=groundAt(P.wx)-22;if(P.y>=gnd){P.y=gnd;P.vy=0;P.onGround=true;}else P.onGround=false;
+  // ── Player 2 (co-op) ──
+  if(coopMode){
+    const p2L=keys['j']||keys['J']||touch2.left;
+    const p2R=keys['l']||keys['L']||touch2.right;
+    const p2J=keys['i']||keys['I']||touch2.up;
+    if(!P2.active)P2.active=true;
+    if(p2L){P2.wx-=3.3;P2.dir=-1;}if(p2R){P2.wx+=3.3;P2.dir=1;}
+    P2.wx=clamp(P2.wx,20,worldW()-20);
+    if(p2J&&P2.onGround){P2.vy=-13;P2.onGround=false;}
+    P2.vy=Math.min(P2.vy+.55,18);P2.y+=P2.vy;
+    const gnd2=groundAt(P2.wx)-22;
+    if(P2.y>=gnd2){P2.y=gnd2;P2.vy=0;P2.onGround=true;}else P2.onGround=false;
+    if(P2.invT>0){P2.invT--;if(P2.invT<=0)P2.hit=false;}
+    crystals=crystals.filter(c=>{if(Math.hypot(c.wx-P2.wx,c.y-P2.y)<52){G.energy+=c.val;G.score+=c.val;G.xp+=5;G._totalE+=c.val;burst(c.wx,c.y,c.color,6,2);return false;}return true;});
+    meteors=meteors.filter(m=>{if(P2.invT<=0&&Math.hypot(m.wx-P2.wx,m.y-P2.y)<m.r+18){G.hp-=12;P2.invT=70;P2.hit=true;burst(P2.wx,P2.y,'#ff0000',8,3);sfxDmg();haptic(55);if(G.hp<=0){gameOver(t('hpRanOut'));return false;}updateHUD();return false;}return true;});
+  }
   if(G.up.magnet)crystals.forEach(c=>{const dx=P.wx-c.wx,dy=P.y-c.y,d=Math.hypot(dx,dy);if(d<160&&d>2){const f=2.2/d;c.wx+=dx*f;c.y+=dy*f;}});
   if(G.up.autoCollect){crystals=crystals.filter(c=>{if(Math.hypot(c.wx-P.wx,c.y-P.y)<68){G.energy+=c.val*(G.up.doubleE?2:1);G.score+=c.val;G.xp+=4;G._totalE+=c.val;burst(c.wx,c.y,c.color,5,2);return false;}return true;});if(crystals.length<5)spawnCrystals(3);}
   if(companion){companion.phase+=dt*1.9;const tx=P.wx+Math.sin(companion.phase)*70,ty=P.y-35+Math.cos(companion.phase*1.3)*18;companion.wx=lerp(companion.wx||P.wx,tx,.09);companion.y=lerp(companion.y,ty,.09);crystals=crystals.filter(c=>{if(Math.hypot(c.wx-(companion.wx||P.wx),c.y-companion.y)<35){G.energy+=c.val;G.score+=c.val;G.xp+=3;G._totalE+=c.val;burst(c.wx,c.y,c.color,4,2);return false;}return true;});}
   crystals.forEach(c=>{c.pulse+=dt*2.3;c.floatY+=dt*1.6;if(c.falling){c.y+=c.vy;if(c.y>=groundAt(c.wx)-14){c.y=groundAt(c.wx)-14;c.falling=false;c.vy=0;}}});
-  G.passiveT+=dt;if(G.passiveT>=3&&buildings.length>0&&!G._powerDown){G.passiveT=0;const inc=buildings.reduce((s,b)=>s+(b.level||1),0)*(1+G.level*.12);G.energy+=inc;G.score+=Math.floor(inc);}
+  G.passiveT+=dt;if(G.passiveT>=3&&buildings.length>0&&!G._powerDown){G.passiveT=0;const inc=buildings.reduce((s,b)=>s+(b.level||1),0)*(1+G.level*.12)*(G._passiveMult||1);G.energy+=inc;G.score+=Math.floor(inc);}
   G.regenT+=dt;if(G.regenT>=(G.up.regen?2.5:8)&&G.hp<G.maxHp){G.regenT=0;G.hp=Math.min(G.maxHp,G.hp+5);}
   if(G._quaking)buildings.forEach(b=>{b._qoff=Math.sin(G.time*15+b.wx*.01)*3;});else buildings.forEach(b=>b._qoff=0);
   if(G.comboT>0){G.comboT-=dt;if(G.comboT<=0)G.combo=0;}
@@ -1525,10 +2685,10 @@ function loop(ts=0){
     if(G.beamOn&&Math.abs(m.wx-P.wx)<18&&m.y<P.y-10){m.hp-=G.up.bossKiller?999:1;if(m.hp<=0){burst(m.wx,m.y,'#ff4400',22,8);sfxHit();screenShake(7,14);if(m.isBoss){G._bossKills++;G._bossSpawnT=9;spop(wtW(m.wx),m.y,'💥 BOSS!','#ff00ff');}G.score+=m.isBoss?60:10;G.xp+=m.isBoss?30:12;updateHUD();checkLvl();return false;}}
     if(m.y>groundAt(m.wx)+m.r){
       craters.push({wx:m.wx,y:groundAt(m.wx),r:m.r*1.5,life:1});
-      buildings=buildings.filter(b=>{if(Math.abs(m.wx-b.wx)<b.pw/2+m.r){b.damage++;if(b.damage>=2){G.homes--;G.pop-=b.pop;G.score=Math.max(0,G.score-30);burst(b.wx,b.y-b.ph/2,'#ff4400',28,7);sfxHit();haptic(90);toast('💥 '+b.name+' נהרס!');updateHUD();return false;}else{burst(b.wx,b.y,'#ff8800',8,3);toast('⚠️ '+b.name+' נפגע! לחץ לתיקון');}}return true;});
+      buildings=buildings.filter(b=>{if(Math.abs(m.wx-b.wx)<b.pw/2+m.r){b.damage++;if(b.damage>=2){G.homes--;G.pop-=b.pop;G.score=Math.max(0,G.score-30);burst(b.wx,b.y-b.ph/2,'#ff4400',28,7);sfxHit();haptic(90);toast('💥 '+tt(BUILD_DATA[b.type].name)+' '+t('destroyedSuffix'));updateHUD();return false;}else{burst(b.wx,b.y,'#ff8800',8,3);toast('⚠️ '+tt(BUILD_DATA[b.type].name)+' '+t('damagedSuffix'));}}return true;});
       burst(m.wx,groundAt(m.wx),'#ff6600',14,5);sfxHit();screenShake(9,18);return false;
     }
-    if(!G.shieldOn&&P.invT<=0&&Math.hypot(m.wx-P.wx,m.y-P.y)<m.r+20){G.hp-=m.isBoss?30:15;P.invT=90;P.hit=true;burst(P.wx,P.y,'#ff0000',14,4);sfxDmg();screenShake(11,22);haptic(75);spop(wtW(P.wx),P.y-20,'-'+(m.isBoss?30:15)+'HP','#ff4466');if(G.hp<=0){gameOver('החייזר מת!');return false;}updateHUD();return false;}
+    if(!G.shieldOn&&P.invT<=0&&Math.hypot(m.wx-P.wx,m.y-P.y)<m.r+20){G.hp-=m.isBoss?30:15;P.invT=90;P.hit=true;burst(P.wx,P.y,'#ff0000',14,4);sfxDmg();screenShake(11,22);haptic(75);spop(wtW(P.wx),P.y-20,'-'+(m.isBoss?30:15)+'HP','#ff4466');if(G.hp<=0){gameOver(t('alienDied'));return false;}updateHUD();return false;}
     if(G.shieldOn&&Math.hypot(m.wx-P.wx,m.y-P.y)<72){burst(m.wx,m.y,'#00eeff',12,4);sfx(440,.1,'sine',.07,2);G.score+=6;updateHUD();return false;}
     return true;
   });
@@ -1539,6 +2699,8 @@ function loop(ts=0){
   if(Math.floor(G.time)%7===0&&Math.floor(G.time)!==Math.floor(G.time-dt)){G.xp+=3;checkLvl();}
   if(shakeTimer>0){shakeTimer--;shakeX=lerp(shakeX,0,.3);shakeY=lerp(shakeY,0,.3);}else shakeX=shakeY=0;
   updateHUD();updateBuildPanel();drawMinimap();
+  tickPowerups(dt);
+  if(bossWaveActive)tickBossWave(dt);
   tickMusicMood(G.time);
   render();
 }
@@ -1566,14 +2728,30 @@ function render(){
     ctx.globalAlpha=p;ctx.fillStyle=c.color;ctx.beginPath();ctx.moveTo(0,-c.r);ctx.lineTo(c.r*.55,0);ctx.lineTo(0,c.r);ctx.lineTo(-c.r*.55,0);ctx.closePath();ctx.fill();
     ctx.fillStyle='rgba(255,255,255,.62)';ctx.globalAlpha=p*.48;ctx.beginPath();ctx.ellipse(-c.r*.2,-c.r*.24,c.r*.22,c.r*.11,-.5,0,Math.PI*2);ctx.fill();ctx.restore();
   });
-  // ghost preview
+  // ghost preview — offset in front of player so it never overlaps the sprite
   if(G.running&&!G.paused){
-    const bd=BUILD_DATA[buildIdx];const cost=Math.floor(bd.cost*(G.up.fastBuild?.7:1));
-    const can=G.energy>=cost;const gnd=groundAt(P.wx);const scpx=wtW(P.wx);const bx=scpx-bd.pw/2,by=gnd-bd.ph;
-    ctx.save();ctx.globalAlpha=.3;ctx.fillStyle=can?bd.col:'#ff4444';ctx.strokeStyle=can?bd.col+'cc':'#ff444488';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+    const bd=BUILD_DATA[buildIdx];
+    const cost=Math.floor(bd.cost*(G.up.fastBuild?.7:1));
+    const can=G.energy>=cost;
+    // Place preview 60px ahead of player in facing direction
+    const previewWx = P.wx + P.dir * 60;
+    const gnd=groundAt(previewWx);
+    const scpx=wtW(previewWx);
+    const bx=scpx-bd.pw/2, by=gnd-bd.ph;
+    ctx.save();
+    ctx.globalAlpha=.22;  // more transparent so it's clearly a hint
+    ctx.fillStyle=can?bd.col:'#ff4444';
+    ctx.strokeStyle=can?bd.col+'cc':'#ff444488';
+    ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
     ctx.beginPath();ctx.roundRect(bx,by,bd.pw,bd.ph,4);ctx.fill();ctx.stroke();ctx.setLineDash([]);
-    ctx.font=`${Math.min(bd.pw,bd.ph)*.46}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.globalAlpha=.5;ctx.fillText(bd.emoji,scpx,by+bd.ph*.5);
-    ctx.globalAlpha=can?.86:.68;ctx.font='bold 9px Orbitron,monospace';ctx.fillStyle=can?'#00ff88':'#ff4444';ctx.fillText(cost+'⚡',scpx,by-7);ctx.restore();
+    ctx.font=`${Math.min(bd.pw,bd.ph)*.46}px serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.globalAlpha=.4;ctx.fillText(bd.emoji,scpx,by+bd.ph*.5);
+    ctx.globalAlpha=can?.75:.55;
+    ctx.font='bold 8px Orbitron,monospace';
+    ctx.fillStyle=can?'#00ff88':'#ff4444';
+    ctx.fillText(cost+'⚡',scpx,by-8);
+    ctx.restore();
   }
   // buildings
   buildings.forEach(b=>{
@@ -1585,7 +2763,7 @@ function render(){
     ctx.fillStyle=b.col+(b.damage>0?'88':'aa');ctx.strokeStyle=b.damage>0?'#ff6600':b.col;ctx.lineWidth=1.5;
     ctx.beginPath();ctx.roundRect(bx,by,b.pw,b.ph*b.buildP,4);ctx.fill();ctx.stroke();
     if(night>.35&&b.buildP>=1){const wa=Math.min(1,(night-.35)/.4);for(let wx=bx+5;wx<bx+b.pw-10;wx+=12){for(let wy=by+6;wy<by+b.ph-8;wy+=13){const fl=Math.sin(b.lightP+G.time*3+wx+wy)>.2?1:.6;ctx.fillStyle=`rgba(255,230,100,${wa*.8*fl})`;ctx.beginPath();ctx.roundRect(wx,wy,6,8,1);ctx.fill();}}}
-    if(b.buildP>.5){ctx.shadowBlur=0;ctx.font=`${Math.min(b.pw,b.ph)*.5}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.emoji,scx,by+b.ph*b.buildP*.5);}
+    if(b.buildP>.5){ctx.shadowBlur=0;ctx.fillStyle='#ffffff';ctx.font=`${Math.min(b.pw,b.ph)*.5}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.emoji,scx,by+b.ph*b.buildP*.5);}
     if((b.level||1)>1){ctx.fillStyle='#ffd700';ctx.font='bold 9px Orbitron,monospace';ctx.textAlign='center';ctx.fillText('★'+(b.level),scx,by-4);}
     if(b.damage>0){ctx.strokeStyle='rgba(255,80,0,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(bx+b.pw*.28,by+b.ph*.18);ctx.lineTo(bx+b.pw*.6,by+b.ph*.5);ctx.lineTo(bx+b.pw*.38,by+b.ph*.72);ctx.stroke();}
     ctx.restore();
@@ -1605,11 +2783,15 @@ function render(){
   // lightning
   lightningBolts.forEach(l=>{ctx.save();ctx.strokeStyle=`rgba(191,95,255,${l.life/12})`;ctx.lineWidth=2+l.life*.15;ctx.shadowBlur=18;ctx.shadowColor='#bf5fff';ctx.beginPath();ctx.moveTo(l.x1,l.y1);const mx=(l.x1+l.x2)/2+rnd(-28,28),my=(l.y1+l.y2)/2+rnd(-18,18);ctx.quadraticCurveTo(mx,my,l.x2,l.y2);ctx.stroke();ctx.restore();});
   // companion
-  if(companion){const cscx=wtW(companion.wx||P.wx);ctx.save();ctx.shadowBlur=12;ctx.shadowColor='#00ff88';ctx.font='21px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('👾',cscx,companion.y);ctx.strokeStyle='rgba(0,255,136,.25)';ctx.lineWidth=1;ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(cscx,companion.y);ctx.lineTo(wtW(P.wx),P.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
+  if(companion){const cscx=wtW(companion.wx||P.wx);ctx.save();ctx.shadowBlur=12;ctx.shadowColor='#00ff88';ctx.fillStyle='#ffffff';ctx.font='21px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('👾',cscx,companion.y);ctx.strokeStyle='rgba(0,255,136,.25)';ctx.lineWidth=1;ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(cscx,companion.y);ctx.lineTo(wtW(P.wx),P.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
   // particles
   particles.forEach(p=>{const pscx=wtW(p.wx);if(pscx<-10||pscx>W+10)return;ctx.globalAlpha=p.life;ctx.beginPath();ctx.arc(pscx,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.col;ctx.fill();});ctx.globalAlpha=1;
-  // player
+  // powerups
+  drawPowerups();
+  // player 1
   drawPlayer();
+  // player 2 (co-op)
+  if(coopMode&&P2.active)drawPlayer2();
   ctx.restore();
   // UI overlay bars
   xUi.clearRect(0,0,W,H);
@@ -1618,17 +2800,128 @@ function render(){
   const hpP=G.hp/G.maxHp;xUi.fillStyle='rgba(0,0,0,.4)';xUi.fillRect(W-110,8,100,6);xUi.fillStyle=hpP>.5?'#00ff88':hpP>.25?'#ffaa00':'#ff4444';xUi.fillRect(W-110,8,100*hpP,6);xUi.strokeStyle='rgba(255,255,255,.16)';xUi.lineWidth=1;xUi.strokeRect(W-110,8,100,6);
 }
 
+function getPlayerSprite(){
+  if(P.hit)return'😵';
+  if(!P.onGround)return'🤸';
+  const lv=G.level||1;
+  const base = selectedChar ? selectedChar.emoji : '👽';
+  if(lv>=7)return'🦾';
+  return base;
+}
+function getPlayerGlow(){
+  const lv=G.level||1;
+  const baseColor = selectedChar ? selectedChar.glowColor : '#00ff88';
+  if(lv>=7)return{blur:30,color:'#ffd700'};
+  if(lv>=5)return{blur:22,color:'#ff88ff'};
+  if(lv>=3)return{blur:17,color:'#00f5ff'};
+  return{blur:14,color:baseColor};
+}
+function drawPlayerAccessories(){
+  const lv=G.level||1;
+  if(lv>=3){ctx.font='13px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⛑️',0,-24);}
+  if(lv>=5){ctx.font='10px serif';ctx.fillText('🛡',14,-5);}
+  if(lv>=7){ctx.font='12px serif';ctx.fillText('✨',-15,-8);ctx.fillText('✨',15,-8);}
+}
+function drawPlayerEnergyBar(){
+  const pct=clamp(G.energy/120,0,1);
+  const bw=36,bh=4,bx=-bw/2,by=26;
+  ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(bx,by,bw,bh);
+  ctx.fillStyle=pct>.5?'#00ff88':pct>.2?'#ffaa00':'#ff4444';
+  ctx.fillRect(bx,by,bw*pct,bh);
+  ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1;ctx.strokeRect(bx,by,bw,bh);
+}
 function drawPlayer(){
   const scpx=wtW(P.wx);
-  ctx.save();ctx.translate(scpx,P.y);if(P.dir===-1)ctx.scale(-1,1);
-  ctx.fillStyle='rgba(0,0,0,.26)';ctx.beginPath();ctx.ellipse(0,22,14,5,0,0,Math.PI*2);ctx.fill();
-  if(G.shieldOn){const sa=.3+Math.sin(G.time*4)*.12;ctx.beginPath();ctx.arc(0,0,42,0,Math.PI*2);ctx.strokeStyle=`rgba(0,220,255,${sa+.26})`;ctx.lineWidth=3;ctx.stroke();ctx.fillStyle=`rgba(0,200,255,${sa*.12})`;ctx.fill();}
+  ctx.save();ctx.translate(scpx,P.y);
+  // Some character emoji (e.g. the running-scout 🏃) have art that inherently
+  // faces left, which used to make them appear to run backward when moving
+  // right. mirrorDefault flips the base orientation so "facing right" always
+  // looks like it's actually facing right, regardless of the glyph's baked-in art.
+  let flip = P.dir===-1;
+  if(selectedChar && selectedChar.mirrorDefault) flip = !flip;
+  if(flip) ctx.scale(-1,1);
+
+  // Ground shadow (ellipse under feet)
+  ctx.fillStyle='rgba(0,0,0,.28)';
+  ctx.beginPath();ctx.ellipse(0,22,14,5,0,0,Math.PI*2);ctx.fill();
+
+  // Shield bubble (ring only, no fill — keeps sprite visible)
+  if(G.shieldOn){
+    const sa=.28+Math.sin(G.time*4)*.1;
+    ctx.beginPath();ctx.arc(0,0,40,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(0,220,255,${sa+.22})`;ctx.lineWidth=2.5;ctx.stroke();
+  }
+
+  // Invincibility blink
   if(P.invT>0&&Math.floor(P.invT/7)%2===0){ctx.restore();return;}
-  if(G.up.jetpack&&!P.onGround){ctx.font='15px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚀',0,8);}
-  ctx.shadowBlur=17;ctx.shadowColor='#00ff88';ctx.font='33px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(P.hit?'😵':P.onGround?'👽':'🤸',0,-2);
-  ctx.shadowBlur=0;ctx.font='bold 7px Orbitron,monospace';ctx.textAlign='center';ctx.fillStyle='rgba(0,255,136,.72)';ctx.fillText(playerName(),0,-30);
-  const moving=keys['ArrowLeft']||keys['ArrowRight']||touch.left||touch.right;
-  if(P.onGround&&moving){const ls=Math.sin(G.time*11)*10;ctx.font='13px serif';ctx.fillText('🦵',ls-6,20);ctx.fillText('🦵',-ls+6,20);}
+
+  // Level glow: subtle CIRCLE under sprite (not shadowBlur which causes box)
+  const gw=getPlayerGlow();
+  ctx.beginPath();ctx.arc(0,-2,20,0,Math.PI*2);
+  ctx.fillStyle=gw.color+'22'; // very transparent
+  ctx.fill();
+
+  // Jetpack flame
+  if(G.up.jetpack&&!P.onGround){
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#ffffff';
+    ctx.font='14px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🔥',0,14);
+  }
+
+  // Main emoji sprite — NO shadowBlur (that's what causes the box)
+  ctx.shadowBlur=0;
+  // IMPORTANT: reset fillStyle to fully opaque first. Color emoji glyphs
+  // ignore fillStyle's hue, but canvas still applies its ALPHA — and the
+  // glow circle above left fillStyle at ~13% opacity, which was silently
+  // making the whole sprite render almost invisible.
+  ctx.fillStyle='#ffffff';
+  ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(getPlayerSprite(),0,-2);
+
+  // Accessories (helmet, armor, wings) — clean, no shadow
+  drawPlayerAccessories();
+
+  // Energy bar under feet
+  drawPlayerEnergyBar();
+
+  // Name tag
+  ctx.shadowBlur=0;
+  ctx.font='bold 7px Orbitron,monospace';ctx.textAlign='center';
+  ctx.fillStyle=gw.color;
+  ctx.fillText(playerName(),0,-46);
+
+  // Walking legs animation
+  const moving=keys['ArrowLeft']||keys['ArrowRight']||touch.left||touch.right||touch2.left||touch2.right;
+  if(P.onGround&&moving){
+    const ls=Math.sin(G.time*11)*10;
+    ctx.font='13px serif';
+    // Draw as a mirrored pair (one leg flipped) so they read as a natural
+    // left/right stride instead of two identical, unmirrored leg glyphs.
+    ctx.save();ctx.translate(ls-6,20);ctx.fillText('🦵',0,0);ctx.restore();
+    ctx.save();ctx.translate(-ls+6,20);ctx.scale(-1,1);ctx.fillText('🦵',0,0);ctx.restore();
+  }
+  ctx.restore();
+}
+// Player 2 (co-op)
+function drawPlayer2(){
+  const scpx=wtW(P2.wx);
+  ctx.save();ctx.translate(scpx,P2.y);if(P2.dir===-1)ctx.scale(-1,1);
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,.22)';ctx.beginPath();ctx.ellipse(0,22,13,5,0,0,Math.PI*2);ctx.fill();
+  if(P2.invT>0&&Math.floor(P2.invT/7)%2===0){ctx.restore();return;}
+  // Subtle glow circle — no shadowBlur
+  ctx.beginPath();ctx.arc(0,-2,18,0,Math.PI*2);
+  ctx.fillStyle='rgba(191,95,255,.18)';ctx.fill();
+  // Sprite clean
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#ffffff'; // reset from the translucent glow fillStyle above — see drawPlayer() note
+  ctx.font='31px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(P2.hit?'😵':'👾',0,-2);
+  // Name tag
+  ctx.font='bold 7px Orbitron,monospace';ctx.textAlign='center';
+  ctx.fillStyle='#bf5fff';
+  ctx.fillText(t('player2Name')||'שחקן 2',0,-32);
   ctx.restore();
 }
 
@@ -1644,8 +2937,10 @@ document.addEventListener('keydown',e=>{
   if(e.key==='c'||e.key==='C')doShield();
   if(e.key==='v'||e.key==='V')doBeam();
   if(e.key==='b'||e.key==='B')doLightning();
-  if(e.key==='q'||e.key==='Q'){buildIdx=(buildIdx+1)%BUILD_DATA.length;updateBuildPanel();toast('🏗️ '+BUILD_DATA[buildIdx].name);}
+  if(e.key==='q'||e.key==='Q'){buildIdx=(buildIdx+1)%BUILD_DATA.length;updateBuildPanel();toast('🏗️ '+tt(BUILD_DATA[buildIdx].name));}
   if(e.key==='Escape'||e.key==='p'||e.key==='P')togglePause();
+  if(coopMode&&(e.key==='u'||e.key==='U'))doCollect();
+  if(coopMode&&(e.key==='o'||e.key==='O'))doShield();
 });
 document.addEventListener('keyup',e=>keys[e.key]=false);
 
@@ -1665,10 +2960,10 @@ setupBtn('btn-beam',      ()=>doBeam(),      null);
 setupBtn('btn-shield',    ()=>doShield(),    null);
 setupBtn('btn-lightning', ()=>doLightning(), null);
 setupBtn('btn-build',     ()=>doBuild(),     null);
-setupBtn('btn-cycle',     ()=>{buildIdx=(buildIdx+1)%BUILD_DATA.length;updateBuildPanel();toast('🏗️ '+BUILD_DATA[buildIdx].name);sfxUI();}, null);
+setupBtn('btn-cycle',     ()=>{buildIdx=(buildIdx+1)%BUILD_DATA.length;updateBuildPanel();toast('🏗️ '+tt(BUILD_DATA[buildIdx].name));sfxUI();}, null);
 
 document.querySelectorAll('.bi').forEach(el=>{
-  el.addEventListener('pointerdown',e=>{e.preventDefault();buildIdx=parseInt(el.dataset.i);updateBuildPanel();toast('🏗️ '+BUILD_DATA[buildIdx].name);sfxUI();},{passive:false});
+  el.addEventListener('pointerdown',e=>{e.preventDefault();buildIdx=parseInt(el.dataset.i);updateBuildPanel();toast('🏗️ '+tt(BUILD_DATA[buildIdx].name));sfxUI();},{passive:false});
 });
 
 // canvas tap → building popup
@@ -1682,8 +2977,20 @@ cGame.addEventListener('click',e=>{
 // ════════════════════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════════════════════
-resize();
-document.getElementById('lb-intro').innerHTML=lbHTML(lbLoad());
+// Boot — wait for fonts/DOM to settle
+function boot(){
+  resize();
+  applyLang();
+  updateMusicBtns();
+  updateMusicStyleLbl();
+  updateVoiceBtns();
+  runSplash();
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
 
 // ════════════════════════════════════════════════════════════
 // GENERATIVE BACKGROUND MUSIC ENGINE
@@ -1694,23 +3001,41 @@ document.getElementById('lb-intro').innerHTML=lbHTML(lbLoad());
 // - Subtle percussion pulse
 // - Smooth transitions between day/night moods
 // ════════════════════════════════════════════════════════════
-let musicEnabled = true; // default ON
-let musicNodes = [];      // all running nodes for clean teardown
-let musicScheduler = null;
-let musicStarted = false;
-const MUSIC_VOL = 0.18;
-
-// ── Load preference ──────────────────────────────────────────
-try {
-  const saved = localStorage.getItem('pg6_music');
-  if (saved !== null) musicEnabled = saved === '1';
-} catch(e) {}
+// music vars moved to top of script
 
 function saveMusicPref() {
   try { localStorage.setItem('pg6_music', musicEnabled ? '1' : '0'); } catch(e) {}
 }
+function saveMusicStylePref() {
+  try { localStorage.setItem('pg6_music_style', String(musicStyleIdx)); } catch(e) {}
+}
+// Cycle to the next music style/track. Restarts the scheduler on the new
+// style so the change is heard right away.
+function cycleMusicStyle() {
+  musicStyleIdx = (musicStyleIdx + 1) % MUSIC_STYLES.length;
+  saveMusicStylePref();
+  updateMusicStyleLbl();
+  toast('🎼 ' + t(MUSIC_STYLES[musicStyleIdx].labelKey));
+  if (AC && musicEnabled) { _chordIdx = 0; startMusic(); }
+}
+function updateMusicStyleLbl() {
+  const lbl = t(currentStyle().labelKey);
+  const el = document.getElementById('music-style-lbl');
+  if (el) el.textContent = lbl;
+  const el2 = document.getElementById('music-style-lbl-pause');
+  if (el2) el2.textContent = lbl;
+}
 
 // ── Toggle ───────────────────────────────────────────────────
+function toggleCoop(){
+  coopMode=!coopMode;
+  const lbl=document.getElementById('coop-lbl');
+  const btn=document.getElementById('coop-toggle');
+  if(lbl)lbl.textContent=t(coopMode?'coopOn':'coopOff');
+  if(btn){btn.style.background=coopMode?'rgba(191,95,255,.2)':'rgba(191,95,255,.08)';btn.style.borderColor=coopMode?'rgba(191,95,255,.7)':'rgba(191,95,255,.3)';}
+  toast(t(coopMode?'coopActive':'coopOff2'));
+}
+
 function toggleMusic() {
   musicEnabled = !musicEnabled;
   saveMusicPref();
@@ -1731,19 +3056,151 @@ function updateMusicBtns() {
   }
 }
 
+// ════════════════════════════════════════════════════════════
+// VOICE COMMANDS — hands-free play via the Web Speech API.
+// Opt-in, no server involved. Falls back gracefully (hides the
+// toggle) on browsers without SpeechRecognition support.
+// ════════════════════════════════════════════════════════════
+let voiceEnabled = false;
+let voiceSupported = (typeof window !== 'undefined') && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+let recognition = null;
+let voiceListening = false;
+let _voiceRestartT = null;
+try {
+  const _vp = localStorage.getItem('pg6_voice');
+  if (_vp !== null) voiceEnabled = _vp === '1' && voiceSupported;
+} catch(e) {}
+
+// Keyword → action. Substring-matched against the recognized transcript so
+// phrases like "תבנה בבקשה בית" or "please build a house" still match.
+// Hebrew and English keywords are both always active, regardless of the
+// current UI language, so kids can just say whichever comes naturally.
+const VOICE_COMMANDS = [
+  { words:['בנה','לבנות','תבנה','build'],                          fn:()=>doBuild() },
+  { words:['אסוף','לאסוף','collect'],                               fn:()=>doCollect() },
+  { words:['מגן','הגן','shield'],                                    fn:()=>doShield() },
+  { words:['קרן','לייזר','beam','laser'],                            fn:()=>doBeam() },
+  { words:['ברק','lightning','bolt'],                                fn:()=>doLightning() },
+  { words:['קפוץ','קפיצה','jump'],                                   fn:()=>pulseTouch('up') },
+  { words:['שמאלה','left'],                                          fn:()=>pulseTouch('left') },
+  { words:['ימינה','right'],                                         fn:()=>pulseTouch('right') },
+  { words:['החלף','שנה סוג','switch','change type'],                 fn:()=>{buildIdx=(buildIdx+1)%BUILD_DATA.length;updateBuildPanel();sfxUI();} },
+  { words:['השהה','עצור משחק','pause','המשך','resume'],              fn:()=>togglePause() },
+];
+
+// Briefly simulate a directional touch press (used for jump/left/right,
+// which are normally held-down inputs) so a single spoken word still moves
+// the character a natural amount instead of nothing happening.
+function pulseTouch(dir){
+  touch[dir]=true;
+  setTimeout(()=>{touch[dir]=false;}, dir==='up'?120:260);
+}
+
+function initVoiceRecognition(){
+  if(!voiceSupported) return null;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.continuous = true;
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  rec.lang = currentLang === 'he' ? 'he-IL' : 'en-US';
+  rec.onresult = (e)=>{
+    const res = e.results[e.results.length-1];
+    if(!res || !res[0]) return;
+    const transcript = res[0].transcript.trim().toLowerCase();
+    if(!transcript) return;
+    handleVoiceTranscript(transcript);
+  };
+  rec.onerror = (e)=>{
+    // 'no-speech' / 'aborted' fire constantly during normal silence — ignore.
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+      toast('🎙️ '+t('voiceMicDenied'));
+      voiceEnabled=false; saveVoicePref(); updateVoiceBtns();
+    }
+  };
+  rec.onend = ()=>{
+    voiceListening=false; updateVoiceBtns();
+    // Browsers auto-stop SpeechRecognition after a while — restart it
+    // automatically as long as the feature is still toggled on.
+    if(voiceEnabled && G.running && !G.over){
+      clearTimeout(_voiceRestartT);
+      _voiceRestartT=setTimeout(()=>startVoiceRecognition(),400);
+    }
+  };
+  return rec;
+}
+
+function handleVoiceTranscript(transcript){
+  for(const cmd of VOICE_COMMANDS){
+    if(cmd.words.some(w=>transcript.includes(w))){
+      if(G.paused && cmd.fn!==togglePause) return; // ignore game actions while paused
+      cmd.fn();
+      showVoiceCaption(transcript);
+      haptic(20);
+      return;
+    }
+  }
+  showVoiceCaption(transcript, true);
+}
+
+function showVoiceCaption(text, unrecognized){
+  const el = document.getElementById('voice-caption');
+  if(!el) return;
+  el.textContent = (unrecognized? '❓ ' : '🎙️ ') + text;
+  el.style.color = unrecognized ? 'rgba(255,255,255,.5)' : '#ff9fe0';
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'), 1600);
+}
+
+function startVoiceRecognition(){
+  if(!voiceSupported || !voiceEnabled) return;
+  if(!recognition) recognition = initVoiceRecognition();
+  if(!recognition) return;
+  try{ recognition.lang = currentLang==='he' ? 'he-IL' : 'en-US'; recognition.start(); voiceListening=true; updateVoiceBtns(); }
+  catch(e){ /* already started — ignore */ }
+}
+function stopVoiceRecognition(){
+  clearTimeout(_voiceRestartT);
+  if(recognition){ try{ recognition.stop(); }catch(e){} }
+  voiceListening=false;
+  updateVoiceBtns();
+}
+function saveVoicePref(){ try{ localStorage.setItem('pg6_voice', voiceEnabled?'1':'0'); }catch(e){} }
+function toggleVoice(){
+  if(!voiceSupported){ toast('🎙️ '+t('voiceUnsupported')); return; }
+  voiceEnabled = !voiceEnabled;
+  saveVoicePref();
+  updateVoiceBtns();
+  if(voiceEnabled){ toast('🎙️ '+t('voiceOn')); if(G.running && !G.over) startVoiceRecognition(); }
+  else { toast('🎙️ '+t('voiceOff')); stopVoiceRecognition(); }
+}
+function updateVoiceBtns(){
+  const toggle = document.getElementById('voice-toggle');
+  if(toggle){
+    toggle.classList.toggle('off', !voiceEnabled);
+    toggle.classList.toggle('unsupported', !voiceSupported);
+  }
+  const hud = document.getElementById('voice-hud-btn');
+  if(hud){
+    hud.textContent = voiceEnabled ? '🎙️' : '🎙️';
+    hud.classList.toggle('off', !voiceEnabled);
+    hud.classList.toggle('listening', voiceListening);
+    hud.style.display = voiceSupported ? hud.style.display : 'none';
+  }
+}
+
+
 // ── Note/chord tables ─────────────────────────────────────────
 // Pentatonic + whole-tone inspired scale, A minor feel
 const SCALES = {
   day:   [220, 246.94, 261.63, 293.66, 329.63, 369.99, 392.00, 440],  // A minor
   night: [196, 220, 261.63, 293.66, 329.63, 369.99, 392.00, 440],     // darker
 };
-// Chord progressions (root frequencies, minor/major)
-const CHORD_PROG = [
-  { root:220, type:'min' }, // Am
-  { root:196, type:'maj' }, // G
-  { root:174.61, type:'maj' }, // F
-  { root:196, type:'maj' }, // G
-];
+// Chord progressions (root frequencies, minor/major) — comes from the
+// currently-selected MUSIC_STYLES entry so different tracks feel distinct.
+const CHORD_PROG = MUSIC_STYLES[0].progression; // fallback reference only
+function currentStyle(){ return MUSIC_STYLES[musicStyleIdx] || MUSIC_STYLES[0]; }
 
 // ── Core audio helpers ────────────────────────────────────────
 function makeGain(val, dest) {
@@ -1790,12 +3247,14 @@ function makePad(freq, gainNode, startT, dur, vol=0.04) {
 // ── Main scheduler ────────────────────────────────────────────
 let _musicBeat = 0;
 let _chordIdx  = 0;
-const BEAT_LEN = 0.55;  // seconds per beat
+let BEAT_LEN = 0.55;  // seconds per beat — overwritten per-style in startMusic()
 const BAR_BEATS = 4;
 
 function scheduleMusicBar(barStartT) {
   if (!AC || !musicEnabled) return;
-  const chord = CHORD_PROG[_chordIdx % CHORD_PROG.length];
+  const style = currentStyle();
+  const prog = style.progression;
+  const chord = prog[_chordIdx % prog.length];
   const isNight = nightF() > 0.5;
   const scale = isNight ? SCALES.night : SCALES.day;
   const masterVol = isNight ? MUSIC_VOL * 0.7 : MUSIC_VOL;
@@ -1819,7 +3278,7 @@ function scheduleMusicBar(barStartT) {
   melNotes.forEach((freq, i) => {
     const t = barStartT + i * (BEAT_LEN * 0.5);
     if (Math.random() > 0.25) { // slight randomness for feel
-      makeOsc(freq, 'sine', melGain, t, t + BEAT_LEN * 0.45, 0.06);
+      makeOsc(freq, style.lead, melGain, t, t + BEAT_LEN * 0.45, 0.06);
     }
   });
 
@@ -1895,8 +3354,8 @@ function scheduleHat(t, vol) {
 
 // ── Scheduler loop ────────────────────────────────────────────
 let _nextBarTime = 0;
-const BAR_DUR = BEAT_LEN * BAR_BEATS;
-const LOOKAHEAD = BAR_DUR * 2; // schedule 2 bars ahead
+let BAR_DUR = BEAT_LEN * BAR_BEATS;
+let LOOKAHEAD = BAR_DUR * 2; // schedule 2 bars ahead
 
 function musicTick() {
   if (!AC || !musicEnabled) return;
@@ -1910,6 +3369,9 @@ function musicTick() {
 function startMusic() {
   if (!AC || !musicEnabled) return;
   stopMusic();
+  BEAT_LEN = currentStyle().beatLen;
+  BAR_DUR = BEAT_LEN * BAR_BEATS;
+  LOOKAHEAD = BAR_DUR * 2;
   musicStarted = true;
   _nextBarTime = AC.currentTime + 0.1;
   musicTick();
@@ -1933,16 +3395,7 @@ function stopMusic() {
 }
 
 // ── Hook into initAudio ───────────────────────────────────────
-function initAudio() {
-  initAudioBase();
-  setTimeout(() => {
-    updateMusicBtns();
-    if (musicEnabled) startMusic();
-    // Show in-game music button
-    const el = document.getElementById('music-hud-btn');
-    if (el) el.style.display = 'block';
-  }, 100);
-}
+// music start is called directly from initAudio below
 
 // Update music mood when day/night changes (called from loop)
 let _lastMoodCheck = 0;
