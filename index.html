@@ -54,16 +54,17 @@ input, textarea {
   /* ── Button sizes: tuned for landscape phones ──
      10vmin at 375px tall = 37.5px → clamps to 44px min
      10vmin at 393px tall = 39.3px → 44px min
-     Keeps buttons touchable without eating vertical space.  */
-  --btn:    clamp(44px, 10vmin, 58px);
-  --btn-sm: clamp(36px,  9vmin, 50px);
-  --gap:    clamp(3px,  0.8vmin, 6px);
+     Keeps buttons touchable without eating vertical space.
+     Bumped up from 44/58 and 36/50 for easier thumb targeting. */
+  --btn:    clamp(52px, 11.5vmin, 68px);
+  --btn-sm: clamp(52px, 11.5vmin, 68px);
+  --gap:    clamp(4px,  0.9vmin, 7px);
 
   /* ── Bottom strip: SINGLE height band containing D-pad + build + actions ──
      D-pad has 2 rows (▲ on top, ◀🔨▶ on bottom). Strip height = dpad height.
      Build panel sits INLINE in the strip center (same vertical band).
-     This removes the old 2-layer stack that was eating 38% of screen height. */
-  --strip-h: calc(var(--btn)*2 + var(--gap)*3 + var(--sab) + 8px);
+     Actions are now a SINGLE row (was a 3×2 grid) — one button height tall. */
+  --strip-h: calc(var(--btn) + var(--gap)*2 + var(--sab) + 8px);
 
   /* Legacy aliases kept for minimap/achieve positioning */
   --ctrl-h:  var(--strip-h);
@@ -376,7 +377,7 @@ canvas {
 #dp-left   { order:1; }
 #dp-right  { order:3; }
 
-/* ── ACTION BUTTONS — 3×2 grid ── */
+/* ── ACTION BUTTONS — single row of 6 ── */
 #actions {
   position:fixed;
   direction: ltr;          /* RTL fix on grid container */
@@ -384,8 +385,8 @@ canvas {
   right:  calc(var(--sar) + var(--gap) * 2);
   z-index: 15;
   display: none;           /* JS sets to grid */
-  grid-template-columns: var(--btn-sm) var(--btn) var(--btn-sm);
-  grid-template-rows:    repeat(2, var(--btn-sm));
+  grid-template-columns: repeat(6, var(--btn));
+  grid-template-rows:    var(--btn);
   gap: var(--gap);
   pointer-events: all;
 }
@@ -436,7 +437,7 @@ canvas {
   backdrop-filter: blur(8px);
   pointer-events: all;
   /* Max width: must fit between D-pad and actions with margin */
-  max-width: calc(100vw - var(--dpad-w, 200px) - var(--act-w, 180px) - 32px);
+  max-width: calc(100vw - var(--dpad-w, 160px) - var(--act-w, 430px) - 32px);
   /* Ensure it stays within the strip height */
   max-height: var(--strip-h);
 }
@@ -1281,15 +1282,13 @@ function resize(){
     x.setTransform(dpr,0,0,dpr,0,0);
   });
   const reserved = getReservedH();
-  // In landscape, controls are now ONE strip (not stacked 2 layers).
-  // Sprite clearance reduced: character ~40px tall at landscape scale.
-  // Target sky: 65.8% of viewport height (ground band shortened 10% from
-  // the previous 62%/38% split, per user request for more visible sky).
+  // Target sky: 75% of viewport height (ground band shortened again from
+  // 65.8%/34.2% to 75%/25%, per user request for even more visible sky).
   const spriteClear = 50;
   const maxGY = H - reserved - spriteClear;
-  const idealGY = H * 0.658;  // was 0.62 — ground band is 10% shorter
-  const minGY   = H * 0.55;   // was 0.50 — ground band is 10% shorter
-  const minAbs  = H * 0.352;  // was 0.28 — ground band is 10% shorter
+  const idealGY = H * 0.75;   // was 0.658 — more sky, less ground
+  const minGY   = H * 0.65;   // was 0.55  — more sky, less ground
+  const minAbs  = H * 0.45;   // was 0.352 — more sky, less ground
   if (maxGY < minGY) {
     GY = Math.max(maxGY, minAbs);
   } else {
