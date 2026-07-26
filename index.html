@@ -1261,6 +1261,16 @@ function getReservedH(){
 function resize(){
   W=window.visualViewport?window.visualViewport.width:window.innerWidth;
   H=window.visualViewport?window.visualViewport.height:window.innerHeight;
+  // Guard: right after an orientation lock/rotation, some mobile browsers
+  // briefly report a 0×0 (or otherwise invalid) viewport before layout
+  // settles. Building the canvases/terrain at that size makes the ground
+  // and player invisible for the rest of the session (nothing ever
+  // triggers a rebuild afterwards). If we see an invalid size, skip this
+  // pass and retry shortly instead of committing broken dimensions.
+  if(!(W>0)||!(H>0)){
+    setTimeout(resize,60);
+    return;
+  }
   // Render the canvas backing store at full device-pixel resolution so
   // emoji/sprites stay crisp on high-DPI phones (previously canvases were
   // sized in CSS pixels only, which made everything look soft/blurry).
@@ -1281,7 +1291,7 @@ function resize(){
   const minGY   = H * 0.55;   // was 0.50 — ground band is 10% shorter
   const minAbs  = H * 0.352;  // was 0.28 — ground band is 10% shorter
   if (maxGY < minGY) {
-    GY = Math.max(maxGY, H * minAbs);
+    GY = Math.max(maxGY, minAbs);
   } else {
     GY = clamp(Math.min(idealGY, maxGY), minGY, maxGY);
   }
@@ -2291,7 +2301,7 @@ function startGame(mode){
   // originated from — otherwise it stays on top of the fresh game and blocks
   // all further input.
   ['s-over','s-victory','s-pause'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('off');});
-  showUI(true);resetAll();
+  showUI(true);resize();resetAll();
   if(voiceEnabled) startVoiceRecognition();
 }
 function showUI(show){
