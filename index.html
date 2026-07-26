@@ -368,28 +368,13 @@ canvas {
 }
 
 /* Arrows: content + direction both locked to LTR */
-#dp-up::after    { content:'▲'; font-size:clamp(18px,4.2vmin,28px); color:rgba(255,255,255,.92); }
 #dp-left::after  { content:'◀'; font-size:clamp(18px,4.2vmin,28px); color:rgba(255,255,255,.92); }
 #dp-right::after { content:'▶'; font-size:clamp(18px,4.2vmin,28px); color:rgba(255,255,255,.92); }
-#dp-up, #dp-left, #dp-right { direction:ltr !important; }
+#dp-left, #dp-right { direction:ltr !important; }
 
 /* Explicit order — absolutely immune to any RTL cascade */
 #dp-left   { order:1; }
-#dp-center { order:2; }
 #dp-right  { order:3; }
-
-#dp-center {
-  width:  calc(var(--btn) * .78);
-  height: calc(var(--btn) * .78);
-  border-color: rgba(0,255,136,.34);
-  background: rgba(0,30,15,.82);
-}
-#dp-center::after { content:'🔨'; font-size:clamp(16px,3.8vmin,24px); }
-#dp-center:active, #dp-center.held {
-  background: rgba(0,180,80,.48);
-  border-color: var(--green);
-  transform: scale(.88);
-}
 
 /* ── ACTION BUTTONS — 3×2 grid ── */
 #actions {
@@ -399,7 +384,7 @@ canvas {
   right:  calc(var(--sar) + var(--gap) * 2);
   z-index: 15;
   display: none;           /* JS sets to grid */
-  grid-template-columns: repeat(3, var(--btn-sm));
+  grid-template-columns: var(--btn-sm) var(--btn) var(--btn-sm);
   grid-template-rows:    repeat(2, var(--btn-sm));
   gap: var(--gap);
   pointer-events: all;
@@ -417,6 +402,14 @@ canvas {
 .act .a-lbl  { font-family:'Orbitron',monospace; font-size:clamp(5px,1.1vmin,8px); letter-spacing:.05em; opacity:.8; }
 .act .a-cost { font-size:clamp(5px,1.1vmin,8px); color:var(--blue); opacity:.6; }
 .act:active, .act.held { transform:scale(.88); }
+/* Jump is the primary, most-frequent action — bigger icon + accent color
+   so the right thumb finds it instantly without looking. */
+.act.jump-btn {
+  border-color: rgba(0,255,136,.55);
+  background: rgba(0,35,20,.86);
+}
+.act.jump-btn .a-ico { font-size:clamp(20px,4.4vmin,30px); }
+.act.jump-btn:active, .act.jump-btn.held { background:rgba(0,200,90,.5); border-color:var(--green); }
 #btn-collect:active, #btn-collect.held { background:rgba(0,120,255,.48); border-color:var(--blue); }
 .act.beam:active,        .act.beam.held        { background:rgba(200,160,0,.42);  border-color:var(--gold);   }
 .act.shield:active,      .act.shield.held      { background:rgba(0,180,80,.40);   border-color:var(--green);  }
@@ -1133,23 +1126,22 @@ canvas {
   <!-- D-PAD -->
   <div id="dpad" style="display:none;">
     <div class="dp-row">
-      <div class="dp" id="dp-up"></div>
-    </div>
-    <div class="dp-row">
       <div class="dp" id="dp-left"></div>
-      <div class="dp" id="dp-center"></div>
       <div class="dp" id="dp-right"></div>
     </div>
   </div>
 
-  <!-- ACTIONS 3×2 -->
+  <!-- ACTIONS 3×2 — bottom row (closer to the thumb's natural resting
+       position) holds the most-frequent actions; jump lives here too so
+       the right thumb can jump without the left thumb ever leaving
+       left/right movement. -->
   <div id="actions" style="display:none;">
-    <div class="act" id="btn-collect"><div class="a-ico">💎</div><div class="a-lbl" id="act-collect-lbl">אסוף</div><div class="a-cost" id="act-collect-cost">חינם</div></div>
     <div class="act beam" id="btn-beam"><div class="a-ico">🔆</div><div class="a-lbl" id="act-beam-lbl">קרן</div><div class="a-cost">8⚡</div></div>
-    <div class="act build-btn" id="btn-build"><div class="a-ico">🏗️</div><div class="a-lbl" id="act-build-lbl">בנה</div><div class="a-cost">[Z]</div></div>
     <div class="act shield" id="btn-shield"><div class="a-ico">🛡️</div><div class="a-lbl" id="act-shield-lbl">מגן</div><div class="a-cost">5⚡</div></div>
     <div class="act lightning-btn" id="btn-lightning"><div class="a-ico">⚡</div><div class="a-lbl" id="act-lightning-lbl">ברק</div><div class="a-cost">10⚡</div></div>
-    <div class="act cycle-btn" id="btn-cycle"><div class="a-ico" id="cycle-ico">🏠</div><div class="a-lbl" id="act-type-lbl">סוג</div><div class="a-cost">[Q]</div></div>
+    <div class="act" id="btn-collect"><div class="a-ico">💎</div><div class="a-lbl" id="act-collect-lbl">אסוף</div><div class="a-cost" id="act-collect-cost">חינם</div></div>
+    <div class="act jump-btn" id="btn-jump"><div class="a-ico">▲</div><div class="a-lbl" id="act-jump-lbl">קפוץ</div><div class="a-cost">[↑]</div></div>
+    <div class="act build-btn" id="btn-build"><div class="a-ico" id="cycle-ico">🏠</div><div class="a-lbl" id="act-build-lbl">בנה</div><div class="a-cost">[Z] ⟲</div></div>
   </div>
 
   <!-- BUILD PANEL -->
@@ -1281,12 +1273,13 @@ function resize(){
   const reserved = getReservedH();
   // In landscape, controls are now ONE strip (not stacked 2 layers).
   // Sprite clearance reduced: character ~40px tall at landscape scale.
-  // Target sky: 58-65% of viewport height.
+  // Target sky: 65.8% of viewport height (ground band shortened 10% from
+  // the previous 62%/38% split, per user request for more visible sky).
   const spriteClear = 50;
   const maxGY = H - reserved - spriteClear;
-  const idealGY = H * 0.62;   // 62% sky is the design target
-  const minGY   = H * 0.50;   // never less than 50% sky
-  const minAbs  = H * 0.28;   // absolute floor on tiny screens
+  const idealGY = H * 0.658;  // was 0.62 — ground band is 10% shorter
+  const minGY   = H * 0.55;   // was 0.50 — ground band is 10% shorter
+  const minAbs  = H * 0.352;  // was 0.28 — ground band is 10% shorter
   if (maxGY < minGY) {
     GY = Math.max(maxGY, H * minAbs);
   } else {
@@ -1683,7 +1676,7 @@ const T = {
     shopChooseItem:'בחר פריט', closeLabel:'✕ סגור',
     objectivesHdr:'יעדי שלב', buildLblColon:'בנה:',
     bpUpgrade:'שדרג', bpSell:'מכור',
-    actCollect:'אסוף', actBeam:'קרן', actBuild:'בנה', actShield:'מגן', actLightning:'ברק', actType:'סוג',
+    actCollect:'אסוף', actBeam:'קרן', actBuild:'בנה', actShield:'מגן', actLightning:'ברק', actType:'סוג', actJump:'קפוץ',
     musicHint:'מוזיקה', flightNote:'✈️ עובד במצב טיסה · מצב אופקי בלבד',
     voiceToggleLbl:'פקודות קול', voiceHint:'פקודות קול',
     voiceOn:'פקודות קול הופעלו! נסה להגיד "בנה" או "קפוץ"',
@@ -1782,7 +1775,7 @@ const T = {
     shopChooseItem:'Choose item', closeLabel:'✕ Close',
     objectivesHdr:'Stage goals', buildLblColon:'Build:',
     bpUpgrade:'Upgrade', bpSell:'Sell',
-    actCollect:'Collect', actBeam:'Beam', actBuild:'Build', actShield:'Shield', actLightning:'Bolt', actType:'Type',
+    actCollect:'Collect', actBeam:'Beam', actBuild:'Build', actShield:'Shield', actLightning:'Bolt', actType:'Type', actJump:'Jump',
     musicHint:'Music', flightNote:'✈️ Works in flight mode · Landscape only',
     voiceToggleLbl:'Voice Commands', voiceHint:'Voice Commands',
     voiceOn:'Voice commands on! Try saying "build" or "jump"',
@@ -1964,7 +1957,7 @@ function applyLang(){
   setText('act-build-lbl',    'actBuild');
   setText('act-shield-lbl',   'actShield');
   setText('act-lightning-lbl','actLightning');
-  setText('act-type-lbl',     'actType');
+  setText('act-jump-lbl',     'actJump');
   setText('build-lbl', 'buildLblColon');
   const mhb = document.getElementById('music-hud-btn');
   if(mhb) mhb.title = t('musicHint');
@@ -2018,6 +2011,7 @@ const CHARACTERS = [
     color:'#ff88ff', glowColor:'#cc44ff',
     bonuses:{he:['🔆 קרן ב-4⚡','⭐ XP +50%'], en:['🔆 Beam costs 4⚡','⭐ XP +50%']},
     ability: g => { g._beamCost=4; g._xpMult=1.5; },
+    hasBody:true, // full standing figure — its own art already includes legs
   },
   {
     id:'knight',   emoji:'🦾',  name:{he:'לוחם גלקטי',  en:'Galactic Knight'},
@@ -2037,6 +2031,7 @@ const CHARACTERS = [
     bonuses:{he:['🧲 אוטו-אסיפה','⚡ גביש +50%'], en:['🧲 Auto-collect','⚡ Crystal +50%']},
     ability: g => { g.up.autoCollect=true; g.up.magnet=true; g.maxHp=60; g.hp=60; },
     mirrorDefault:true, // the 🏃 glyph's built-in art faces left, so mirror it to match facing-right by default
+    hasBody:true, // full running figure — its own art already includes legs
   },
   {
     id:'mystic',   emoji:'🔮',  name:{he:'מיסטיק',       en:'Mystic'},
@@ -2055,6 +2050,7 @@ const CHARACTERS = [
     color:'#ffaa44', glowColor:'#ff8800',
     bonuses:{he:['🗼 פסיבי x2','🔬 מחקר +30%'], en:['🗼 Passive x2','🔬 Research +30%']},
     ability: g => { g._passiveMult=2; },
+    hasBody:true, // full standing figure — its own art already includes legs
   },
 ];
 
@@ -2841,9 +2837,28 @@ function drawPlayer(){
   if(selectedChar && selectedChar.mirrorDefault) flip = !flip;
   if(flip) ctx.scale(-1,1);
 
-  // Ground shadow (ellipse under feet)
+  // Ground shadow (ellipse under feet) — drawn at the stable (non-bouncing)
+  // position so it doesn't slide around under the character.
   ctx.fillStyle='rgba(0,0,0,.28)';
   ctx.beginPath();ctx.ellipse(0,22,14,5,0,0,Math.PI*2);ctx.fill();
+
+  // Invincibility blink
+  if(P.invT>0&&Math.floor(P.invT/7)%2===0){ctx.restore();return;}
+
+  // Walk animation: a small bounce + gentle rock, applied to the whole
+  // sprite as one unit. This replaces an earlier approach that drew separate
+  // leg emoji under the character — those looked like a second, disconnected
+  // pair of icons for headless characters (alien/robot/mystic), and like a
+  // visibly duplicated body for characters whose own art already has legs
+  // (wizard/scout/engineer). A single bounce works for every character's art.
+  const moving=keys['ArrowLeft']||keys['ArrowRight']||touch.left||touch.right||touch2.left||touch2.right;
+  const walking = P.onGround && moving;
+  const walkBob  = walking ? Math.abs(Math.sin(G.time*11))*-3 : 0; // small upward hop
+  const walkTilt = walking ? Math.sin(G.time*11)*0.05 : 0;         // gentle rock
+
+  ctx.save();
+  ctx.translate(0, walkBob);
+  ctx.rotate(walkTilt);
 
   // Shield bubble (ring only, no fill — keeps sprite visible)
   if(G.shieldOn){
@@ -2851,9 +2866,6 @@ function drawPlayer(){
     ctx.beginPath();ctx.arc(0,0,40,0,Math.PI*2);
     ctx.strokeStyle=`rgba(0,220,255,${sa+.22})`;ctx.lineWidth=2.5;ctx.stroke();
   }
-
-  // Invincibility blink
-  if(P.invT>0&&Math.floor(P.invT/7)%2===0){ctx.restore();return;}
 
   // Level glow: subtle CIRCLE under sprite (not shadowBlur which causes box)
   const gw=getPlayerGlow();
@@ -2881,26 +2893,17 @@ function drawPlayer(){
 
   // Accessories (helmet, armor, wings) — clean, no shadow
   drawPlayerAccessories();
+  ctx.restore(); // end walk-bounce transform
 
-  // Energy bar under feet
+  // Energy bar under feet — drawn at the stable position so it doesn't bob
   drawPlayerEnergyBar();
 
-  // Name tag
+  // Name tag — also stable, for legibility
   ctx.shadowBlur=0;
   ctx.font='bold 7px Orbitron,monospace';ctx.textAlign='center';
   ctx.fillStyle=gw.color;
   ctx.fillText(playerName(),0,-46);
 
-  // Walking legs animation
-  const moving=keys['ArrowLeft']||keys['ArrowRight']||touch.left||touch.right||touch2.left||touch2.right;
-  if(P.onGround&&moving){
-    const ls=Math.sin(G.time*11)*10;
-    ctx.font='13px serif';
-    // Draw as a mirrored pair (one leg flipped) so they read as a natural
-    // left/right stride instead of two identical, unmirrored leg glyphs.
-    ctx.save();ctx.translate(ls-6,20);ctx.fillText('🦵',0,0);ctx.restore();
-    ctx.save();ctx.translate(-ls+6,20);ctx.scale(-1,1);ctx.fillText('🦵',0,0);ctx.restore();
-  }
   ctx.restore();
 }
 // Player 2 (co-op)
@@ -2953,14 +2956,33 @@ function setupBtn(id,onDown,onUp){
 }
 setupBtn('dp-left',  ()=>touch.left=true,  ()=>touch.left=false);
 setupBtn('dp-right', ()=>touch.right=true, ()=>touch.right=false);
-setupBtn('dp-up',    ()=>touch.up=true,    ()=>touch.up=false);
-setupBtn('dp-center',()=>doBuild(),         null);
+setupBtn('btn-jump', ()=>touch.up=true,    ()=>touch.up=false);
 setupBtn('btn-collect',   ()=>doCollect(),   null);
 setupBtn('btn-beam',      ()=>doBeam(),      null);
 setupBtn('btn-shield',    ()=>doShield(),    null);
 setupBtn('btn-lightning', ()=>doLightning(), null);
-setupBtn('btn-build',     ()=>doBuild(),     null);
-setupBtn('btn-cycle',     ()=>{buildIdx=(buildIdx+1)%BUILD_DATA.length;updateBuildPanel();toast('🏗️ '+tt(BUILD_DATA[buildIdx].name));sfxUI();}, null);
+
+// Build button: quick tap builds; holding it down ~450ms cycles the
+// selected building type instead — merges what used to be two separate
+// buttons (build + cycle-type) into one, freeing a slot for jump.
+(function setupBuildBtn(){
+  const el = document.getElementById('btn-build'); if(!el) return;
+  let holdT = null, didHold = false;
+  el.addEventListener('pointerdown', e=>{
+    e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('held');
+    didHold = false;
+    holdT = setTimeout(()=>{
+      didHold = true;
+      buildIdx=(buildIdx+1)%BUILD_DATA.length; updateBuildPanel();
+      toast('🏗️ '+tt(BUILD_DATA[buildIdx].name)); sfxUI(); haptic(30);
+    }, 450);
+  }, {passive:false});
+  el.addEventListener('pointerup', ()=>{
+    el.classList.remove('held'); clearTimeout(holdT);
+    if(!didHold) doBuild();
+  });
+  el.addEventListener('pointercancel', ()=>{ el.classList.remove('held'); clearTimeout(holdT); });
+})();
 
 document.querySelectorAll('.bi').forEach(el=>{
   el.addEventListener('pointerdown',e=>{e.preventDefault();buildIdx=parseInt(el.dataset.i);updateBuildPanel();toast('🏗️ '+tt(BUILD_DATA[buildIdx].name));sfxUI();},{passive:false});
