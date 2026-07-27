@@ -1338,6 +1338,21 @@ function resize(){
   const wanted = H * (1 - groundPct/100);
   GY = clamp(wanted, minAbs, maxGY);
   buildTerrain();
+  refixGroundEntities();
+}
+// Crystals, buildings, powerups, and ground craters each cache an absolute
+// y computed from groundAt() at spawn/placement time (for performance —
+// recomputing every frame isn't needed since the ground doesn't normally
+// move). But when GY *does* change (ground-height slider, or a real
+// resize/rotation), those cached positions go stale — entities stay at
+// their old height while the ground line moves, so they end up floating
+// above or sunk below the new surface until a full restart rebuilds
+// everything from scratch. Re-anchor them all to the new terrain here.
+function refixGroundEntities(){
+  if(typeof crystals!=='undefined')  crystals.forEach(c=>{ if(!c.falling) c.y=groundAt(c.wx)-14; });
+  if(typeof buildings!=='undefined') buildings.forEach(b=>{ b.y=groundAt(b.wx); });
+  if(typeof craters!=='undefined')   craters.forEach(cr=>{ cr.y=groundAt(cr.wx); });
+  if(typeof powerups!=='undefined')  powerups.forEach(pu=>{ if(pu.landed) pu.y=groundAt(pu.wx)-pu.r; });
 }
 function onGroundSliderInput(v){
   groundPct = clamp(parseFloat(v)||0, -40, 65);
@@ -2383,8 +2398,8 @@ function showUI(show){
 function resetAll(){
   G={running:true,paused:false,over:false,energy:20,hp:100,maxHp:100,_passiveMult:1,_beamCost:8,_shieldCost:5,_xpMult:1,_eventRate:1,homes:0,pop:0,score:0,level:1,xp:0,xpNext:100,time:0,dayPhase:0,passiveT:0,regenT:0,shieldOn:false,shieldT:0,beamOn:false,beamT:0,combo:0,comboT:0,lastCollect:0,weatherEv:null,meteorRate:.004,up:{doubleE:false,fastBuild:false,superShield:false,autoCollect:false,companion:false,magnet:false,jetpack:false,bossKiller:false,regen:false},_totalE:0,_waveT:0,_bossKills:0,_bossMode:false,_waveMode:false,_bossSpawnT:999,_crystalMult:1,_quaking:false,_windfall:false,_powerDown:false,_eventT:0};
   const ww=worldW()||W*3;
-  P={wx:ww/2-80,y:GY-40,vy:0,onGround:true,dir:1,invT:0,hit:false,jetOn:false};
-  P2={wx:ww/2+80,y:GY-40,vy:0,onGround:true,dir:-1,invT:0,hit:false,jetOn:false,active:coopMode};
+  P={wx:ww/2-80,y:GY-40,vy:0,onGround:true,dir:1,invT:0,hit:false,jetOn:false,jumping:false};
+  P2={wx:ww/2+80,y:GY-40,vy:0,onGround:true,dir:-1,invT:0,hit:false,jetOn:false,jumping:false,active:coopMode};
   crystals=[];buildings=[];meteors=[];particles=[];craters=[];companion=null;lightningBolts=[];powerups=[];_nextPowerupT=30;bossWaveActive=false;bossWaveT=0;
   buildIdx=0;stageIdx=0;stageActive=false;camX=0;shakeX=shakeY=shakeTimer=0;
   _bldTarget=null;_shopOpen=false;_specialEv=null;_specialEvT=0;
@@ -2703,9 +2718,21 @@ function loop(ts=0){
   if(movL){P.wx-=3.3;P.dir=-1;}
   if(movR){P.wx+=3.3;P.dir=1;}
   P.wx=clamp(P.wx,20,ww-20);
-  if(jumpK){if(P.onGround){P.vy=-13;P.onGround=false;sfx(200,.1,'sine',.07,2);}else if(G.up.jetpack){P.vy=Math.max(P.vy-.8,-10);P.jetOn=true;burst(P.wx,P.y+14,'#ff8800',2,2);}}else P.jetOn=false;
-  P.vy=Math.min(P.vy+.55,18);P.y+=P.vy;
-  const gnd=groundAt(P.wx)-22;if(P.y>=gnd){P.y=gnd;P.vy=0;P.onGround=true;}else P.onGround=false;
+  if(jumpK){if(P.onGround){P.vy=-13;P.onGround=false;P.jumping=true;sfx(200,.1,'sine',.07,2);}else if(G.up.jetpack){P.vy=Math.max(P.vy-.8,-10);P.jetOn=true;P.jumping=true;burst(P.wx,P.y+14,'#ff8800',2,2);}}else P.jetOn=false;
+  const gnd=groundAt(P.wx)-22;
+  if(P.jumping){
+    // Real jump/jetpack in progress — normal gravity arc until landing.
+    P.vy=Math.min(P.vy+.55,18);P.y+=P.vy;
+    if(P.y>=gnd){P.y=gnd;P.vy=0;P.onGround=true;P.jumping=false;}
+    else P.onGround=false;
+  } else {
+    // Not jumping — always follow the terrain surface directly. The
+    // ground here is a continuous height field with small periodic dips
+    // (no real gaps), so treating every dip as a "fall" made the
+    // character repeatedly flicker into the airborne pose and briefly
+    // stutter while walking. Walking should just hug the ground.
+    P.y=gnd;P.vy=0;P.onGround=true;
+  }
   // ── Player 2 (co-op) ──
   if(coopMode){
     const p2L=keys['j']||keys['J']||touch2.left;
@@ -2714,10 +2741,15 @@ function loop(ts=0){
     if(!P2.active)P2.active=true;
     if(p2L){P2.wx-=3.3;P2.dir=-1;}if(p2R){P2.wx+=3.3;P2.dir=1;}
     P2.wx=clamp(P2.wx,20,worldW()-20);
-    if(p2J&&P2.onGround){P2.vy=-13;P2.onGround=false;}
-    P2.vy=Math.min(P2.vy+.55,18);P2.y+=P2.vy;
+    if(p2J&&P2.onGround){P2.vy=-13;P2.onGround=false;P2.jumping=true;}
     const gnd2=groundAt(P2.wx)-22;
-    if(P2.y>=gnd2){P2.y=gnd2;P2.vy=0;P2.onGround=true;}else P2.onGround=false;
+    if(P2.jumping){
+      P2.vy=Math.min(P2.vy+.55,18);P2.y+=P2.vy;
+      if(P2.y>=gnd2){P2.y=gnd2;P2.vy=0;P2.onGround=true;P2.jumping=false;}
+      else P2.onGround=false;
+    } else {
+      P2.y=gnd2;P2.vy=0;P2.onGround=true;
+    }
     if(P2.invT>0){P2.invT--;if(P2.invT<=0)P2.hit=false;}
     crystals=crystals.filter(c=>{if(Math.hypot(c.wx-P2.wx,c.y-P2.y)<52){G.energy+=c.val;G.score+=c.val;G.xp+=5;G._totalE+=c.val;burst(c.wx,c.y,c.color,6,2);return false;}return true;});
     meteors=meteors.filter(m=>{if(P2.invT<=0&&Math.hypot(m.wx-P2.wx,m.y-P2.y)<m.r+18){G.hp-=12;P2.invT=70;P2.hit=true;burst(P2.wx,P2.y,'#ff0000',8,3);sfxDmg();haptic(55);if(G.hp<=0){gameOver(t('hpRanOut'));return false;}updateHUD();return false;}return true;});
@@ -2870,6 +2902,23 @@ function getPlayerGlow(){
   if(lv>=3)return{blur:17,color:'#00f5ff'};
   return{blur:14,color:baseColor};
 }
+function drawPlayerLegs(walking){
+  // Skip for characters whose own emoji art already includes a body/legs
+  // (wizard/scout/engineer), and for poses that already show full limbs
+  // (falling 🤸, hit 😵) or the level-7 armored form (🦾).
+  if(selectedChar && selectedChar.hasBody) return;
+  if(!P.onGround || P.hit || (G.level||1)>=7) return;
+  const swing = walking ? Math.sin(G.time*11) : 0; // -1..1 walk cycle, matches walkBob/walkTilt
+  const liftL = walking ? Math.max(0,-swing)*3 : 0;
+  const liftR = walking ? Math.max(0, swing)*3 : 0;
+  const kick  = walking ? swing*1.6 : 0;
+  ctx.save();
+  ctx.globalAlpha=0.9;
+  ctx.fillStyle='#2b2b2b';
+  ctx.beginPath();ctx.ellipse(-5+kick, 19-liftL, 2.5, 6, 0, 0, Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse( 5-kick, 19-liftR, 2.5, 6, 0, 0, Math.PI*2);ctx.fill();
+  ctx.restore();
+}
 function drawPlayerAccessories(){
   const lv=G.level||1;
   if(lv>=3){ctx.font='13px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⛑️',0,-24);}
@@ -2948,6 +2997,14 @@ function drawPlayer(){
   ctx.fillStyle='#ffffff';
   ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(getPlayerSprite(),0,-2);
+
+  // Simple legs for headless characters (alien/robot/knight/mystic) — their
+  // emoji is just a head/bust with no body, so the walk-bounce alone left
+  // them looking legless while moving. Drawn AFTER (on top of) the glyph,
+  // low enough to clearly stick out below it as separate "feet" rather
+  // than a disconnected extra icon — an earlier attempt drew them BEHIND
+  // the glyph and too close to it, so the opaque emoji art mostly hid them.
+  drawPlayerLegs(walking);
 
   // Accessories (helmet, armor, wings) — clean, no shadow
   drawPlayerAccessories();
@@ -3183,15 +3240,33 @@ function initVoiceRecognition(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const rec = new SR();
   rec.continuous = true;
-  rec.interimResults = false;
+  // Interim results let us react to a command word the instant it's heard,
+  // instead of waiting for the browser's own silence-detection heuristic to
+  // decide the utterance is "final" (often a very noticeable 1-2s lag).
+  rec.interimResults = true;
   rec.maxAlternatives = 1;
   rec.lang = currentLang === 'he' ? 'he-IL' : 'en-US';
+  let _firedIdx = -1; // resultIndex already acted on, so growing interim transcripts don't re-fire the same command
   rec.onresult = (e)=>{
-    const res = e.results[e.results.length-1];
+    const idx = e.resultIndex;
+    const res = e.results[idx];
     if(!res || !res[0]) return;
     const transcript = res[0].transcript.trim().toLowerCase();
     if(!transcript) return;
-    handleVoiceTranscript(transcript);
+    if(!res.isFinal){
+      if(_firedIdx===idx) return; // already handled this utterance
+      const cmd = matchVoiceCommand(transcript);
+      if(cmd){ fireVoiceCommand(cmd, transcript); _firedIdx=idx; }
+      return;
+    }
+    // Final result: skip if the interim pass already fired this utterance;
+    // otherwise handle it now (covers short utterances that arrive final
+    // with no earlier interim match) and show "unrecognized" if it never matched.
+    if(_firedIdx===idx){ _firedIdx=-1; return; }
+    _firedIdx=-1;
+    const cmd = matchVoiceCommand(transcript);
+    if(cmd) fireVoiceCommand(cmd, transcript);
+    else showVoiceCaption(transcript, true);
   };
   rec.onerror = (e)=>{
     // 'no-speech' / 'aborted' fire constantly during normal silence — ignore.
@@ -3212,17 +3287,17 @@ function initVoiceRecognition(){
   return rec;
 }
 
-function handleVoiceTranscript(transcript){
+function matchVoiceCommand(transcript){
   for(const cmd of VOICE_COMMANDS){
-    if(cmd.words.some(w=>transcript.includes(w))){
-      if(G.paused && cmd.fn!==togglePause) return; // ignore game actions while paused
-      cmd.fn();
-      showVoiceCaption(transcript);
-      haptic(20);
-      return;
-    }
+    if(cmd.words.some(w=>transcript.includes(w))) return cmd;
   }
-  showVoiceCaption(transcript, true);
+  return null;
+}
+function fireVoiceCommand(cmd, transcript){
+  if(G.paused && cmd.fn!==togglePause) return; // ignore game actions while paused
+  cmd.fn();
+  showVoiceCaption(transcript);
+  haptic(20);
 }
 
 function showVoiceCaption(text, unrecognized){
