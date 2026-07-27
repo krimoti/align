@@ -66,6 +66,13 @@ input, textarea {
      Actions are now a SINGLE row (was a 3×2 grid) — one button height tall. */
   --strip-h: calc(var(--btn) + var(--gap)*2 + var(--sab) + 8px);
 
+  /* Widths of the D-pad (2 buttons) and action row (6 buttons), used to
+     center #build-panel in the real gap between them. resize() overwrites
+     these with exact pixel values once layout is known; these are just
+     safe defaults for the moment before that first runs. */
+  --dpad-w: calc(var(--btn)*2 + var(--gap));
+  --act-w:  calc(var(--btn)*6 + var(--gap)*5);
+
   /* Legacy aliases kept for minimap/achieve positioning */
   --ctrl-h:  var(--strip-h);
   --build-h: clamp(40px, 8vmin, 54px);
@@ -426,7 +433,16 @@ canvas {
   direction: ltr;
   /* Vertically center in the strip */
   bottom: calc(var(--sab) + var(--gap));
-  left: 50%; transform: translateX(-50%);
+  /* Centered on the true midpoint of the gap between the D-pad and the
+     action row (NOT raw viewport 50%) — the two are different widths
+     (2 buttons vs 6), so centering on 50vw biases the panel toward the
+     wider side and can overlap it. --dpad-w/--act-w are published live
+     by resize(). */
+  left: calc(
+    var(--sal) + var(--gap)*2 + var(--dpad-w) +
+    (100vw - var(--sal) - var(--sar) - var(--gap)*4 - var(--dpad-w) - var(--act-w)) / 2
+  );
+  transform: translateX(-50%);
   z-index: 14;
   display: none;
   background: rgba(0,6,26,.92);
@@ -1282,18 +1298,26 @@ function resize(){
     x.setTransform(dpr,0,0,dpr,0,0);
   });
   const reserved = getReservedH();
-  // Target sky: 75% of viewport height (ground band shortened again from
-  // 65.8%/34.2% to 75%/25%, per user request for even more visible sky).
-  const spriteClear = 50;
-  const maxGY = H - reserved - spriteClear;
-  const idealGY = H * 0.75;   // was 0.658 — more sky, less ground
-  const minGY   = H * 0.65;   // was 0.55  — more sky, less ground
-  const minAbs  = H * 0.45;   // was 0.352 — more sky, less ground
-  if (maxGY < minGY) {
-    GY = Math.max(maxGY, minAbs);
-  } else {
-    GY = clamp(Math.min(idealGY, maxGY), minGY, maxGY);
+  // Fix: --act-w / --dpad-w (used by #build-panel's max-width) were never
+  // actually set anywhere, so the panel always fell back to hardcoded
+  // guesses. Once button sizing changed those guesses drifted from reality
+  // and squeezed 2 of the 4 build options off-screen. Compute the real
+  // pixel widths from the live tokens so the panel always gets the space
+  // that's genuinely free between the D-pad and the action row.
+  {
+    const cs2   = getComputedStyle(document.documentElement);
+    const btnPx = parseFloat(cs2.getPropertyValue('--btn')) || 60;
+    const gapPx = parseFloat(cs2.getPropertyValue('--gap')) || 5;
+    document.documentElement.style.setProperty('--act-w',  (btnPx*6 + gapPx*5) + 'px'); // 6 action buttons
+    document.documentElement.style.setProperty('--dpad-w', (btnPx*2 + gapPx)   + 'px'); // 2 d-pad buttons
   }
+  // Ground line sits just above the reserved control strip (+ jump
+  // clearance) — i.e. sky fills essentially all remaining space above the
+  // buttons, per user request, rather than capping at a fixed percentage.
+  const spriteClear = 50;
+  const maxGY  = H - reserved - spriteClear;
+  const minAbs = H * 0.30; // absolute safety floor so ground never vanishes on extremely cramped screens
+  GY = Math.max(minAbs, maxGY);
   buildTerrain();
 }
 if(window.visualViewport){
