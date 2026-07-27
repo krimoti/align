@@ -1314,7 +1314,7 @@ function resize(){
   // Ground line sits just above the reserved control strip (+ jump
   // clearance) — i.e. sky fills essentially all remaining space above the
   // buttons, per user request, rather than capping at a fixed percentage.
-  const spriteClear = 50;
+  const spriteClear = 16; // was 50 — this was reserving far more space than the character sprite actually needs, eating into the sky unnecessarily
   const maxGY  = H - reserved - spriteClear;
   const minAbs = H * 0.30; // absolute safety floor so ground never vanishes on extremely cramped screens
   GY = Math.max(minAbs, maxGY);
