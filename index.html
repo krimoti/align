@@ -1106,6 +1106,13 @@ canvas {
       <button class="btn-sec" id="btn-pause-restart" onclick="startGame(window._lastMode||'campaign')" style="margin-top:8px;width:100%;">🔄 התחל מחדש</button><br>
       <button class="btn-sec" onclick="cycleMusicStyle()" style="margin-top:4px;width:100%;"><span id="music-cycle-ico-pause">🔀</span> <span id="music-style-lbl-pause">🌌 חלל רגוע</span></button><br>
       <button class="btn-sec" id="btn-pause-menu" onclick="toIntro()" style="margin-top:4px;width:100%;border-color:rgba(255,100,100,.35);color:#ff9999;">🏠 תפריט ראשי</button>
+      <div style="margin-top:14px;width:100%;text-align:right;">
+        <label for="ground-slider" style="font-size:clamp(11px,2.2vmin,13px);color:rgba(255,255,255,.65);display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span>🏔️ גובה קרקע</span><span id="ground-slider-val" style="color:var(--blue);font-family:'Orbitron',monospace;">0%</span>
+        </label>
+        <input type="range" id="ground-slider" min="0" max="65" value="0" step="1"
+               style="width:100%;accent-color:var(--blue);" oninput="onGroundSliderInput(this.value)">
+      </div>
     </div>
   </div>
 
@@ -1243,6 +1250,8 @@ const cGame=document.getElementById('c-game'),ctx=cGame.getContext('2d');
 const cUi=document.getElementById('c-ui'),xUi=cUi.getContext('2d');
 const cMini=document.getElementById('c-mini'),xMini=cMini.getContext('2d');
 let W=0,H=0,GY=0;
+let groundPct=0; // player-chosen ground height % (0=default/minimum), set via pause-menu slider
+try{ const gp=parseFloat(localStorage.getItem('pg6_ground_pct')); if(!isNaN(gp)) groundPct=Math.max(0,Math.min(65,gp)); }catch(e){}
 let camX=0;
 const WORLD_MULT=3;
 const worldW=()=>W*WORLD_MULT;
@@ -1312,13 +1321,23 @@ function resize(){
     document.documentElement.style.setProperty('--dpad-w', (btnPx*2 + gapPx)   + 'px'); // 2 d-pad buttons
   }
   // Ground line sits just above the reserved control strip (+ jump
-  // clearance) — i.e. sky fills essentially all remaining space above the
-  // buttons, per user request, rather than capping at a fixed percentage.
+  // clearance) by default — i.e. sky fills essentially all remaining space
+  // above the buttons. The player can override this via the "ground
+  // height" slider in the pause menu (groundPct, 0 = default/minimum
+  // ground). Either way GY is clamped so ground can never encroach on the
+  // button strip (maxGY) or vanish entirely (minAbs).
   const spriteClear = 16; // was 50 — this was reserving far more space than the character sprite actually needs, eating into the sky unnecessarily
   const maxGY  = H - reserved - spriteClear;
   const minAbs = H * 0.30; // absolute safety floor so ground never vanishes on extremely cramped screens
-  GY = Math.max(minAbs, maxGY);
+  const wanted = H * (1 - groundPct/100);
+  GY = clamp(wanted, minAbs, maxGY);
   buildTerrain();
+}
+function onGroundSliderInput(v){
+  groundPct = clamp(parseFloat(v)||0, 0, 65);
+  document.getElementById('ground-slider-val').textContent = Math.round(groundPct)+'%';
+  try{ localStorage.setItem('pg6_ground_pct', String(groundPct)); }catch(e){}
+  resize();
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize',resize);
@@ -3035,6 +3054,8 @@ cGame.addEventListener('click',e=>{
 // Boot — wait for fonts/DOM to settle
 function boot(){
   resize();
+  const gs=document.getElementById('ground-slider');
+  if(gs){ gs.value=groundPct; document.getElementById('ground-slider-val').textContent=Math.round(groundPct)+'%'; }
   applyLang();
   updateMusicBtns();
   updateMusicStyleLbl();
