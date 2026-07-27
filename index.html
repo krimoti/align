@@ -1110,7 +1110,7 @@ canvas {
         <label for="ground-slider" style="font-size:clamp(11px,2.2vmin,13px);color:rgba(255,255,255,.65);display:flex;justify-content:space-between;margin-bottom:4px;">
           <span>🏔️ גובה קרקע</span><span id="ground-slider-val" style="color:var(--blue);font-family:'Orbitron',monospace;">0%</span>
         </label>
-        <input type="range" id="ground-slider" min="0" max="65" value="0" step="1"
+        <input type="range" id="ground-slider" min="-40" max="65" value="0" step="1"
                style="width:100%;accent-color:var(--blue);" oninput="onGroundSliderInput(this.value)">
       </div>
     </div>
@@ -1251,7 +1251,7 @@ const cUi=document.getElementById('c-ui'),xUi=cUi.getContext('2d');
 const cMini=document.getElementById('c-mini'),xMini=cMini.getContext('2d');
 let W=0,H=0,GY=0;
 let groundPct=0; // player-chosen ground height % (0=default/minimum), set via pause-menu slider
-try{ const gp=parseFloat(localStorage.getItem('pg6_ground_pct')); if(!isNaN(gp)) groundPct=Math.max(0,Math.min(65,gp)); }catch(e){}
+try{ const gp=parseFloat(localStorage.getItem('pg6_ground_pct')); if(!isNaN(gp)) groundPct=Math.max(-40,Math.min(65,gp)); }catch(e){}
 let camX=0;
 const WORLD_MULT=3;
 const worldW=()=>W*WORLD_MULT;
@@ -1323,18 +1323,24 @@ function resize(){
   // Ground line sits just above the reserved control strip (+ jump
   // clearance) by default — i.e. sky fills essentially all remaining space
   // above the buttons. The player can override this via the "ground
-  // height" slider in the pause menu (groundPct, 0 = default/minimum
-  // ground). Either way GY is clamped so ground can never encroach on the
-  // button strip (maxGY) or vanish entirely (minAbs).
-  const spriteClear = 16; // was 50 — this was reserving far more space than the character sprite actually needs, eating into the sky unnecessarily
-  const maxGY  = H - reserved - spriteClear;
+  // height" slider in the pause menu (groundPct, 0 = default). Negative
+  // values eat into the clearance buffer itself (down to a small safe
+  // floor) for even more sky — safe to go slightly negative because the
+  // buttons are opaque and sit on top (z-index), so a sliver of ground
+  // tucked just behind their top edge is simply hidden, not visible.
+  // Either way GY is clamped so ground can never actually show through
+  // behind the buttons (clearFloor) or vanish entirely (minAbs).
+  const spriteClear = 16; // was 50 — this was reserving far more space than the character sprite actually needs
+  const clearFloor   = -20; // most the buffer can shrink by past 0 (ground tucks behind opaque buttons, still hidden)
+  const effClear = Math.max(clearFloor, spriteClear + Math.min(0, groundPct));
+  const maxGY  = H - reserved - effClear;
   const minAbs = H * 0.30; // absolute safety floor so ground never vanishes on extremely cramped screens
   const wanted = H * (1 - groundPct/100);
   GY = clamp(wanted, minAbs, maxGY);
   buildTerrain();
 }
 function onGroundSliderInput(v){
-  groundPct = clamp(parseFloat(v)||0, 0, 65);
+  groundPct = clamp(parseFloat(v)||0, -40, 65);
   document.getElementById('ground-slider-val').textContent = Math.round(groundPct)+'%';
   try{ localStorage.setItem('pg6_ground_pct', String(groundPct)); }catch(e){}
   resize();
