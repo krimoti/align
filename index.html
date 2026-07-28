@@ -166,7 +166,17 @@ canvas {
   gap: clamp(3px,.7vmin,6px);
   justify-content: center;
   flex-wrap: nowrap;
+  /* Safety net: 8 stat pills don't always fit narrow phones at comfortable
+     size. Rather than silently clipping one off-screen (unreachable —
+     exactly what happened to the new truck button), allow horizontal
+     scroll so every pill stays reachable, with the scrollbar hidden so it
+     still reads as a normal fixed bar. */
+  overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: none;
 }
+.hud-row::-webkit-scrollbar { display: none; }
 .stat {
   display: flex; align-items: center;
   gap: clamp(2px,.5vmin,4px);
@@ -183,7 +193,9 @@ canvas {
 .stat.hp-low .s-val { color:var(--red); animation:blink .5s infinite alternate; }
 .stat.ew     .s-val { color:var(--orange); }
 .stat-btn { cursor:pointer; pointer-events:all; }
-.stat-btn:active { background:rgba(0,80,200,.45); }
+.stat-btn:active, .stat-btn.held { background:rgba(0,80,200,.45); }
+.stat-btn.afford { border-color:#00ff88; animation:affordPulse 1s infinite; }
+@keyframes affordPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.5);} 50%{box-shadow:0 0 8px 2px rgba(0,255,136,.5);} }
 @keyframes blink { to{text-shadow:0 0 8px var(--red);} }
 
 /* overlays */
@@ -355,6 +367,21 @@ canvas {
 }
 
 /* D-pad buttons */
+/* Belt+suspenders #2 — some mobile browsers still show the text-selection
+   magnifier / "Look Up" callout on a long-press even though the global *
+   reset already sets user-select/touch-callout to none, because these
+   controls sit as an overlay above the canvas and a long, held press
+   (exactly how the D-pad/action buttons are normally used) is the same
+   gesture the OS uses to start text selection. Re-assert with !important
+   directly on the controls themselves so nothing can win over the reset. */
+.dp, .act, .bi, .stat-btn {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none;
+  touch-action: none !important;
+  outline: none;
+}
 .dp {
   width:  var(--btn);
   height: var(--btn);
@@ -1019,7 +1046,7 @@ canvas {
         <span style="font-size:clamp(11px,2.4vmin,14px);color:rgba(0,245,255,.8);">🔄</span>
       </div>
       <div class="mode-row">
-        <div class="mode-btn" onclick="startGame('campaign')"><span class="m-ico">🚀</span><div class="m-title">קמפיין</div><div class="m-desc">7 שלבים עם סיפור</div></div>
+        <div class="mode-btn" onclick="startGame('campaign')"><span class="m-ico">🚀</span><div class="m-title">קמפיין</div><div class="m-desc">10 שלבים עם סיפור</div></div>
         <div class="mode-btn" onclick="startGame('free')"><span class="m-ico">🌌</span><div class="m-title">חופשי</div><div class="m-desc">שחק ללא הגבלה</div></div>
       </div>
       <div class="ctrl-grid">
@@ -1128,7 +1155,7 @@ canvas {
     <div class="card">
       <div class="v-planet"></div>
       <div class="victory-title" id="vic-title">🌍 הכוכב חי!</div>
-      <p id="vic-desc" style="font-size:clamp(11px,2.3vmin,13px);color:rgba(255,255,255,.52);line-height:1.7;margin-bottom:10px;">השלמת את כל 7 השלבים!</p>
+      <p id="vic-desc" style="font-size:clamp(11px,2.3vmin,13px);color:rgba(255,255,255,.52);line-height:1.7;margin-bottom:10px;">השלמת את כל 10 השלבים!</p>
       <div class="stats-grid">
         <div class="sbox"><div class="sv" id="vs-score">0</div><div class="sl" id="vs-score-lbl">ניקוד</div></div>
         <div class="sbox"><div class="sv" id="vs-pop">0</div><div class="sl" id="vs-pop-lbl">תושבים</div></div>
@@ -1159,9 +1186,10 @@ canvas {
   <!-- HUD -->
   <div id="hud" style="display:none;pointer-events:none;">
     <div class="hud-row">
-      <div class="stat stat-btn" onclick="togglePause()" style="pointer-events:all;border-color:rgba(255,255,255,.14);"><span class="s-ico">⏸</span></div>
+      <div class="stat stat-btn" id="stat-pause" style="pointer-events:all;border-color:rgba(255,255,255,.14);"><span class="s-ico">⏸</span></div>
       <div class="stat" id="stat-energy"><span class="s-ico">⚡</span><div><div class="s-val" id="h-e">0</div><div class="s-lbl" id="lbl-energy">אנרגיה</div></div></div>
-      <div class="stat"><span class="s-ico">⭐</span><div><div class="s-val" id="h-score">0</div><div class="s-lbl" id="lbl-score">ניקוד</div></div></div>
+      <div class="stat" id="stat-score"><span class="s-ico">⭐</span><div><div class="s-val" id="h-score">0</div><div class="s-lbl" id="lbl-score">ניקוד</div></div></div>
+      <div class="stat stat-btn" id="stat-truck" style="pointer-events:all;"><span class="s-ico">🚚</span><div class="s-val" id="h-truck">0</div></div>
       <div class="stat"><span class="s-ico">👽</span><div><div class="s-val" id="h-pop">0</div><div class="s-lbl" id="lbl-pop">תושבים</div></div></div>
       <div class="stat"><span class="s-ico">🏠</span><div><div class="s-val" id="h-homes">0</div><div class="s-lbl" id="lbl-homes">מבנים</div></div></div>
       <div class="stat" id="stat-hp"><span class="s-ico">💗</span><div><div class="s-val" id="h-hp">100</div><div class="s-lbl" id="lbl-hp">חיים</div></div></div>
@@ -1184,6 +1212,16 @@ canvas {
   <div id="toast"></div>
   <div id="achieve"><div class="a-ico" id="ach-ico">🏆</div><div><div class="a-title" id="ach-title"></div><div class="a-desc" id="ach-desc"></div></div></div>
   <div id="bld-popup"><div class="bp-title" id="bpt"></div><button class="bp-btn" id="bp-upgrade"></button><button class="bp-btn" id="bp-repair" style="display:none"></button><button class="bp-btn" id="bp-sell"></button><div class="bp-close" id="bp-close-btn" onclick="closeBldPopup()">✕ סגור</div></div>
+
+  <div id="confirm-modal" style="position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(0,0,20,.72);backdrop-filter:blur(4px);direction:rtl;">
+    <div style="max-width:min(300px,86vw);width:100%;background:rgba(5,3,35,.97);border:1px solid var(--border);border-radius:var(--radius);padding:clamp(14px,3vmin,20px);text-align:center;">
+      <div id="confirm-msg" style="font-size:clamp(12px,2.6vmin,15px);color:#fff;margin-bottom:16px;line-height:1.5;"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="confirm-yes" class="bp-btn" style="flex:1;text-align:center;margin:0;"></button>
+        <button id="confirm-no" class="bp-btn" style="flex:1;text-align:center;margin:0;"></button>
+      </div>
+    </div>
+  </div>
   <div id="haptic-flash"></div>
 <div id="combo-flash"></div>
 
@@ -1258,6 +1296,18 @@ document.addEventListener('contextmenu',  e => e.preventDefault(), true);
 document.addEventListener('gesturestart', e => e.preventDefault(), { passive:false });
 document.addEventListener('gesturechange',e => e.preventDefault(), { passive:false });
 document.addEventListener('gestureend',   e => e.preventDefault(), { passive:false });
+// Pinch-zoom is blocked above, but iOS/Android's separate "double-tap to
+// zoom" gesture isn't — and the space-dash feature (double-tap ← or → to
+// blink) taps the D-pad twice in quick succession, which is exactly the
+// gesture the OS uses to zoom the whole page. Block it the standard way:
+// if two touchend events land within the OS's double-tap window, swallow
+// the second one so the browser never gets a chance to zoom.
+let _lastTouchEnd=0;
+document.addEventListener('touchend', e => {
+  const now=Date.now();
+  if(now-_lastTouchEnd<=400) e.preventDefault();
+  _lastTouchEnd=now;
+}, { passive:false });
 
 document.addEventListener('selectstart', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -1289,7 +1339,7 @@ const cBg=document.getElementById('c-bg'),xBg=cBg.getContext('2d');
 const cGame=document.getElementById('c-game'),ctx=cGame.getContext('2d');
 const cUi=document.getElementById('c-ui'),xUi=cUi.getContext('2d');
 const cMini=document.getElementById('c-mini'),xMini=cMini.getContext('2d');
-let W=0,H=0,GY=0;
+let W=0,H=0,GY=0,groundHardMax=99999;
 let groundPct=0; // player-chosen ground height % (0=default/minimum), set via pause-menu slider
 try{ const gp=parseFloat(localStorage.getItem('pg6_ground_pct')); if(!isNaN(gp)) groundPct=Math.max(-40,Math.min(65,gp)); }catch(e){}
 let camX=0;
@@ -1377,6 +1427,12 @@ function resize(){
   const minAbs = H * 0.30; // absolute safety floor so ground never vanishes on extremely cramped screens
   const wanted = H * (1 - groundPct/100);
   GY = clamp(wanted, minAbs, maxGY);
+  // Craters (damageGround) push individual terrain points down further
+  // than GY itself — cap them at the exact same worst-case ceiling GY is
+  // allowed to reach, so a meteor can never gouge a hole that dips below
+  // the top edge of the button strip (only the same small opaque-tuck
+  // tolerance as the flat ground line itself).
+  groundHardMax = H - reserved - clearFloor;
   buildTerrain();
   refixGroundEntities();
 }
@@ -1391,6 +1447,7 @@ function resize(){
 function refixGroundEntities(){
   if(typeof crystals!=='undefined')  crystals.forEach(c=>{ if(!c.falling) c.y=groundAt(c.wx)-14; });
   if(typeof buildings!=='undefined') buildings.forEach(b=>{ b.y=groundAt(b.wx); });
+  if(typeof defenseTrucks!=='undefined') defenseTrucks.forEach(tr=>{ tr.y=groundAt(tr.wx); });
   if(typeof craters!=='undefined')   craters.forEach(cr=>{ cr.y=groundAt(cr.wx); });
   if(typeof powerups!=='undefined')  powerups.forEach(pu=>{ if(pu.landed) pu.y=groundAt(pu.wx)-pu.r; });
 }
@@ -1530,8 +1587,27 @@ const PLANET_THEMES = [
     starTint:[200,220,255],crystalColors:['#00f5ff','#ffd700','#ff7eb3','#00ff88'],
     paradise:true,
   },
+  { name:'כוכב המגן',
+    skyTop:[15,25,45],skyBot:[40,60,90],nightTop:[5,10,25],nightBot:[15,25,45],
+    groundTop:'#3a4a5a',groundMid:'#20303f',groundBot:'#0e1620',
+    groundEdge:'rgba(120,180,220,.4)',fog:'rgba(80,140,200,.08)',
+    starTint:[190,220,255],crystalColors:['#ff4466','#66aaff','#ffffff','#88ccff'],
+  },
+  { name:'כוכב הרעש',
+    skyTop:[55,25,10],skyBot:[110,55,20],nightTop:[25,10,5],nightBot:[45,20,10],
+    groundTop:'#4a2a10',groundMid:'#2a1608',groundBot:'#140a04',
+    groundEdge:'rgba(220,120,40,.4)',fog:'rgba(200,90,20,.1)',
+    starTint:[255,190,140],crystalColors:['#ff7700','#ffaa33','#ff5500','#ffcc66'],
+  },
+  { name:'כוכב התקומה',
+    skyTop:[60,20,90],skyBot:[180,90,200],nightTop:[20,5,45],nightBot:[60,20,90],
+    groundTop:'#6a2a7a',groundMid:'#3a1550',groundBot:'#1a0828',
+    groundEdge:'rgba(255,200,80,.5)',fog:'rgba(255,150,220,.08)',
+    starTint:[255,220,255],crystalColors:['#ffd700','#ff88ff','#00f5ff','#ffffff'],
+    paradise:true,
+  },
 ];
-function currentTheme(){return PLANET_THEMES[Math.max(0,Math.min(stageIdx,6))];}
+function currentTheme(){return PLANET_THEMES[Math.max(0,Math.min(stageIdx,9))];}
 
 // ══════════════════════════════════════════════════════════════
 // CO-OP STATE (variables declared here, P2 object declared near G,P)
@@ -1601,13 +1677,35 @@ function drawBg(){
 let terrain=[];
 function buildTerrain(){
   terrain=[];const ww=worldW()||W*3;const step=8,cnt=Math.ceil(ww/step)+2;
-  for(let i=0;i<cnt;i++){const h=i%18===0?rnd(13,25):i%6===0?rnd(3,12):rnd(0,4);terrain.push({x:i*step,h:GY+h});}
+  for(let i=0;i<cnt;i++){const h=i%18===0?rnd(13,25):i%6===0?rnd(3,12):rnd(0,4);terrain.push({x:i*step,h:GY+h,origH:GY+h,dmg:0});}
 }
 function groundAt(wx){
   if(!terrain.length)return GY;
   const step=8,i=Math.floor(wx/step);
   if(i<=0)return terrain[0].h;if(i>=terrain.length-1)return terrain[terrain.length-1].h;
   return terrain[i].h*(1-(wx-i*step)/step)+terrain[i+1].h*((wx-i*step)/step);
+}
+// ── GROUND DAMAGE — meteors gouge the terrain; player walks over the
+// crater and taps the build button to repair it (see repairGround()). ──
+function damageGround(wx,r){
+  const step=8;const i0=Math.max(0,Math.floor((wx-r)/step)),i1=Math.min(terrain.length-1,Math.ceil((wx+r)/step));
+  for(let i=i0;i<=i1;i++){
+    const p=terrain[i];if(!p)continue;const dx=Math.abs(p.x-wx);if(dx>r)continue;
+    const depth=(1-dx/r)*rnd(9,16);
+    p.h=Math.min(p.h+depth,p.origH+34,groundHardMax);
+    p.dmg=1;
+  }
+}
+function groundDamagedNear(wx){
+  const step=8;const i=Math.round(wx/step);
+  for(let k=-5;k<=5;k++){const p=terrain[i+k];if(p&&p.dmg)return true;}
+  return false;
+}
+function repairGround(){
+  const rad=44;let found=false;
+  for(const p of terrain){if(p.dmg&&Math.abs(p.x-P.wx)<rad){p.h=p.origH;p.dmg=0;found=true;}}
+  if(found){G._groundRepairs=(G._groundRepairs||0)+1;burst(P.wx,groundAt(P.wx),'#a05a2c',14,4);sfxBuild();haptic(30);toast('🔧 '+t('groundRepairedMsg'));updateHUD();}
+  return found;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1620,6 +1718,10 @@ const BUILD_DATA=[
   {name:{he:'מעבדה',en:'Lab'},    emoji:'🔬',cost:50,pop:20,pw:50,ph:46,col:'#2ab88a',xpg:50},
   {name:{he:'מקדש', en:'Temple'}, emoji:'⛩️',cost:80,pop:35,pw:56,ph:56,col:'#c44a4a',xpg:80},
 ];
+// The missile-defense truck is a separate mobile unit (not a placeable
+// building) — flat cost, see TRUCK_COST.
+const TRUCK_COST = 100;
+const MISSILE_FIRE_COST = 50;
 const UPGRADES=[
   {id:'doubleE',   name:{he:'⚡ אנרגיה כפולה',en:'⚡ Double Energy'},  desc:{he:'כל גביש = פי 2',en:'Every crystal ×2'},            ico:'⚡'},
   {id:'fastBuild', name:{he:'🏗️ בנייה מהירה',en:'🏗️ Fast Build'},  desc:{he:'עלות -30%',en:'Cost -30%'},                 ico:'🏗️'},
@@ -1658,7 +1760,10 @@ const STAGE_DATA = {
     {title:'קפיצת מדרגה',story:'הקהילה גדלה. הגיע הזמן למדע. מעבדה תפענח את סודות הכוכב.',goals:['goalLab','goalTower','goalLevel4'],reward:"🎁 ג'טפק + עוזר",btn:'לפסגה!'},
     {title:'המלחמה הגדולה',story:'שלושה בוסי-מטאור. הם מגיעים אחד אחרי השני. השמד את כולם.',goals:['goalBoss1','goalBoss2','goalBoss3'],reward:'🎁 מגנט + אנרגיה כפולה',btn:'קרב!'},
     {title:'תרבות',story:'העיר שורדת. אבל ציוויליזציה אמיתית צריכה נשמה. המקדש הקוסמי יחבר את תושביך.',goals:['goalTemple','goal500pop','goal3000score'],reward:'🎁 מפציץ + בנייה מהירה',btn:'לגדולה!'},
-    {title:'הכוכב חי',story:'זה הרגע. הכוכב המת מתעורר לחיים. הצמחייה פורצת, אוקיינוסים מתמלאים.',goals:['goal1000pop','goal8000score','goal8homes'],reward:'🏆 ניצחון!',btn:'לנצח!'},
+    {title:'הכוכב חי',story:'הכוכב המת מתעורר לחיים. הצמחייה פורצת, אוקיינוסים מתמלאים. אבל הרוגע הזה לא יימשך.',goals:['goal1000pop','goal8000score','goal8homes'],reward:'🎁 קרקע חסינה + 120⚡',btn:'הלאה!'},
+    {title:'מגן הכוכב',story:'המטאורים לומדים לכוון ישר לעבר הבתים שלך. צבור מספיק ניקוד ורכוש משאית טילים אוטומטית — יחידה ניידת שמיירטת אותם באוויר, לפני שיפגעו.',goals:['goalDefense','goalHomes6','goal5000score'],reward:'🎁 100⚡ + דחיפת ניקוד',btn:'להגנה!'},
+    {title:'קרקע רועדת',story:'רעידות מתמשכות סודקות את האדמה בכל מקום. תקן את הקרקע הפגועה שוב ושוב, ושרוד את הגל הארוך ביותר עד כה.',goals:['goalRepair5','goalSurvive60','goal7000score'],reward:'🎁 ריגן + 100⚡',btn:'להחזיק מעמד!'},
+    {title:'לידה מחדש',story:'זהו זה. שתי משאיות טילים שומרות על השמיים, הקרקע יציבה, והעיר פורחת. הרגע האחרון להוכיח שהציוויליזציה שלך ראויה לשרוד.',goals:['goal1500pop','goal12000score','goalDefense2'],reward:'🏆 ניצחון!',btn:'לנצח!'},
   ],
   en:[
     {title:'Foundation',story:'A barren planet. Thin air, frozen ground. You — the last alien — step out of the ship with only building tools.',goals:['goalEnergy','goalHomes2'],reward:'🎁 Shop + Upgrade',btn:'Lets go!'},
@@ -1667,7 +1772,10 @@ const STAGE_DATA = {
     {title:'Leap Forward',story:'The community grows. Time for science. A lab will unlock the planet\'s secrets.',goals:['goalLab','goalTower','goalLevel4'],reward:'🎁 Jetpack + Helper',btn:'To the top!'},
     {title:'The Great War',story:'Three meteor bosses. They come one after another. Destroy them all.',goals:['goalBoss1','goalBoss2','goalBoss3'],reward:'🎁 Magnet + Double Energy',btn:'Fight!'},
     {title:'Culture',story:'The city survives. But a real civilization needs a soul. The cosmic temple will connect your citizens.',goals:['goalTemple','goal500pop','goal3000score'],reward:'🎁 Blaster + Fast Build',btn:'To greatness!'},
-    {title:'The Planet Lives',story:'This is the moment. The dead planet awakens. Vegetation bursts, oceans fill, skies turn blue.',goals:['goal1000pop','goal8000score','goal8homes'],reward:'🏆 Victory!',btn:'Victory!'},
+    {title:'The Planet Lives',story:'The dead planet awakens. Vegetation bursts, oceans fill, skies turn blue. But this calm won\'t last.',goals:['goal1000pop','goal8000score','goal8homes'],reward:'🎁 Reinforced Ground + 120⚡',btn:'Onward!'},
+    {title:'Shield of the Planet',story:'Meteors are learning to aim straight for your houses. Save up enough score and buy an automated missile truck — a mobile unit that intercepts them mid-air, before they land.',goals:['goalDefense','goalHomes6','goal5000score'],reward:'🎁 100⚡ + Score boost',btn:'Defend!'},
+    {title:'Trembling Ground',story:'Constant tremors keep cracking the earth everywhere. Repair the damaged ground again and again, and survive the longest wave yet.',goals:['goalRepair5','goalSurvive60','goal7000score'],reward:'🎁 Regen + 100⚡',btn:'Hold on!'},
+    {title:'Rebirth',story:'This is it. Two missile trucks guard the skies, the ground is stable, and the city thrives. One last moment to prove your civilization deserves to survive.',goals:['goal1500pop','goal12000score','goalDefense2'],reward:'🏆 Victory!',btn:'Victory!'},
   ]
 };
 const GOAL_CHECKS = [
@@ -1678,11 +1786,16 @@ const GOAL_CHECKS = [
   [()=>(G._bossKills||0)>=1, ()=>(G._bossKills||0)>=2, ()=>(G._bossKills||0)>=3],
   [()=>buildings.some(b=>b.type===3), ()=>G.pop>=500, ()=>G.score>=3000],
   [()=>G.pop>=1000, ()=>G.score>=8000, ()=>G.homes>=8],
+  [()=>defenseTrucks.length>=1, ()=>G.homes>=6, ()=>G.score>=5000],
+  [()=>(G._groundRepairs||0)>=5, ()=>(G._waveT||0)>=60, ()=>G.score>=7000],
+  [()=>G.pop>=1500, ()=>G.score>=12000, ()=>defenseTrucks.length>=2],
 ];
 const GOAL_ICOS = [
   ['⚡','🏠'],['👽','🏗️','⭐'],['⏱️','🏠'],
   ['🔬','🗼','🎯'],['👹','👹','👹'],
   ['⛩️','👽','🌟'],['👽','🌟','🏙️'],
+  ['🚚','🏠','🌟'],['🔧','⏱️','🌟'],
+  ['👽','🌟','🚚'],
 ];
 const STAGE_REWARDS = [
   ()=>{G.energy+=30;setTimeout(()=>openShop('Stage 1!'),800);},
@@ -1691,6 +1804,9 @@ const STAGE_REWARDS = [
   ()=>{G.up.jetpack=true;G.up.companion=true;spawnCompanion();setTimeout(()=>openShop('Stage 4!'),800);},
   ()=>{G.up.magnet=true;G.up.doubleE=true;setTimeout(()=>openShop('Stage 5!'),800);},
   ()=>{G.up.bossKiller=true;G.up.fastBuild=true;setTimeout(()=>openShop('Stage 6!'),800);},
+  ()=>{G.energy+=120;setTimeout(()=>openShop('Stage 7!'),800);},
+  ()=>{G.energy+=100;setTimeout(()=>openShop('Stage 8!'),800);},
+  ()=>{G.up.regen=true;G.energy+=100;setTimeout(()=>openShop('Stage 9!'),800);},
   ()=>showVictory(),
 ];
 const STAGE_CONFIGS = [
@@ -1700,7 +1816,10 @@ const STAGE_CONFIGS = [
   {meteorRate:.007,ambNote:73},
   {meteorRate:.003,ambNote:41,bossMode:true},
   {meteorRate:.009,ambNote:82},
-  {meteorRate:.012,ambNote:98,isFinal:true},
+  {meteorRate:.012,ambNote:98},
+  {meteorRate:.015,ambNote:60},
+  {meteorRate:.02,ambNote:70,waveMode:true},
+  {meteorRate:.018,ambNote:110,isFinal:true},
 ];
 
 // ════════════════════════════════════════════════════════════
@@ -1713,7 +1832,7 @@ try { currentLang = localStorage.getItem('pg6_lang') || 'he'; } catch(e){}
 function buildStages(){
   const lang = currentLang==='en' ? 'en' : 'he';
   return STAGE_DATA[lang].map((s,i)=>({
-    num:i+1, title:s.title, emoji:['🌱','🏙️','⚡','🔬','👹','⛩️','🌍'][i],
+    num:i+1, title:s.title, emoji:['🌱','🏙️','⚡','🔬','👹','⛩️','🌍','🚚','🌋','✨'][i],
     story:s.story,
     goals: s.goals.map((gk,j)=>({
       text:t(gk), ico:GOAL_ICOS[i][j],
@@ -1739,7 +1858,7 @@ const T = {
     splashMsg0:'טוען עולמות...', splashMsg1:'מאתחל מטאורים...',
     splashMsg2:'בונה ציוויליזציה...', splashMsg3:'כמעט מוכן...',
     // Intro
-    campaignTitle:'קמפיין', campaignDesc:'7 שלבים עם סיפור',
+    campaignTitle:'קמפיין', campaignDesc:'10 שלבים עם סיפור',
     freeTitle:'חופשי', freeDesc:'שחק ללא הגבלה',
     nameLabel:'שם:', namePlaceholder:'חייזר-1',
     coopOff:'Co-op 2 שחקנים (כבוי)', coopOn:'Co-op 2 שחקנים (פעיל)',
@@ -1750,7 +1869,10 @@ const T = {
     statsBuild:'בנייה', statsLuck:'מזל',
     // In-game HUD labels
     hudEnergy:'אנרגיה', hudHP:'חיים', hudHomes:'מבנים',
-    hudPop:'תושבים', hudScore:'ניקוד', hudLevel:'רמה',
+    hudPop:'תושבים', hudScore:'ניקוד', hudLevel:'רמה', hudTruck:'טילים',
+    truckNeed:'צריך', truckConfirm:'לרכוש משאית טילים ב-', truckBought:'משאית טילים נפרסה!',
+    truckDetachConfirm:'לנתק את משאית הטילים? תקבל החזר חלקי בניקוד.', truckDetached:'המשאית נותקה',
+    confirmYes:'אישור', confirmCancel:'ביטול',
     // Stage screen
     stageEyebrow:'שלב', stageGoalsHdr:'🎯 יעדי השלב',
     // Actions / toasts
@@ -1773,9 +1895,12 @@ const T = {
     goalBoss1:'הדוף בוס 1', goalBoss2:'הדוף בוס 2', goalBoss3:'הדוף בוס 3',
     goalTemple:'בנה מקדש', goal500pop:'500 תושבים', goal3000score:'ניקוד 3000',
     goal1000pop:'1000 תושבים', goal8000score:'ניקוד 8000', goal8homes:'8 מבנים',
+    goalDefense:'רכוש משאית טילים', goalHomes6:'6 מבנים', goal5000score:'ניקוד 5000',
+    goalRepair5:'תקן 5 קרטרים', goalSurvive60:'שרוד 60 שניות', goal7000score:'ניקוד 7000',
+    goal1500pop:'1500 תושבים', goal12000score:'ניקוד 12000', goalDefense2:'2 משאיות טילים',
     // Game over / victory
     gameOver:'☠️ GAME OVER', victory:'🌍 הכוכב חי!',
-    victoryDesc:'השלמת את כל 7 השלבים!',
+    victoryDesc:'השלמת את כל 10 השלבים!',
     overReason:'הציוויליזציה קרסה',
     alienDied:'החייזר מת!',
     hpRanOut:'החיים אזלו!',
@@ -1789,7 +1914,8 @@ const T = {
     shopChooseItem:'בחר פריט', closeLabel:'✕ סגור',
     objectivesHdr:'יעדי שלב', buildLblColon:'בנה:',
     bpUpgrade:'שדרג', bpSell:'מכור',
-    actCollect:'אסוף', actBeam:'קרן', actBuild:'בנה', actShield:'מגן', actLightning:'ברק', actType:'סוג', actJump:'קפוץ',
+    actCollect:'אסוף', actBeam:'קרן', actBuild:'בנה', actShield:'מגן', actLightning:'ברק', actType:'סוג', actJump:'קפוץ', actRepairGnd:'תקן',
+    groundRepairedMsg:'קרקע תוקנה!', dashMsg:'דילוג בחלל!',
     musicHint:'מוזיקה', flightNote:'✈️ עובד במצב טיסה · מצב אופקי בלבד',
     voiceToggleLbl:'פקודות קול', voiceHint:'פקודות קול',
     voiceOn:'פקודות קול הופעלו! נסה להגיד "בנה" או "קפוץ"',
@@ -1838,7 +1964,7 @@ const T = {
     splashMsg0:'Loading worlds...', splashMsg1:'Initializing meteors...',
     splashMsg2:'Building civilization...', splashMsg3:'Almost ready...',
     // Intro
-    campaignTitle:'Campaign', campaignDesc:'7 story stages',
+    campaignTitle:'Campaign', campaignDesc:'10 story stages',
     freeTitle:'Free Play', freeDesc:'Play without limits',
     nameLabel:'Name:', namePlaceholder:'Alien-1',
     coopOff:'Co-op 2 players (off)', coopOn:'Co-op 2 players (on)',
@@ -1849,7 +1975,10 @@ const T = {
     statsBuild:'Build', statsLuck:'Luck',
     // In-game HUD labels
     hudEnergy:'Energy', hudHP:'HP', hudHomes:'Buildings',
-    hudPop:'Citizens', hudScore:'Score', hudLevel:'Level',
+    hudPop:'Citizens', hudScore:'Score', hudLevel:'Level', hudTruck:'Missiles',
+    truckNeed:'Need', truckConfirm:'Buy missile truck for', truckBought:'Missile truck deployed!',
+    truckDetachConfirm:'Detach the missile truck? You\'ll get a partial score refund.', truckDetached:'Truck detached',
+    confirmYes:'Confirm', confirmCancel:'Cancel',
     // Stage screen
     stageEyebrow:'Stage', stageGoalsHdr:'🎯 Stage Goals',
     // Actions / toasts
@@ -1872,9 +2001,12 @@ const T = {
     goalBoss1:'Repel boss 1', goalBoss2:'Repel boss 2', goalBoss3:'Repel boss 3',
     goalTemple:'Build a temple', goal500pop:'500 citizens', goal3000score:'Score 3000',
     goal1000pop:'1000 citizens', goal8000score:'Score 8000', goal8homes:'8 buildings',
+    goalDefense:'Buy a missile truck', goalHomes6:'6 buildings', goal5000score:'Score 5000',
+    goalRepair5:'Repair 5 craters', goalSurvive60:'Survive 60 seconds', goal7000score:'Score 7000',
+    goal1500pop:'1500 citizens', goal12000score:'Score 12000', goalDefense2:'2 missile trucks',
     // Game over / victory
     gameOver:'☠️ GAME OVER', victory:'🌍 The Planet Lives!',
-    victoryDesc:'You completed all 7 stages!',
+    victoryDesc:'You completed all 10 stages!',
     overReason:'The civilization collapsed',
     alienDied:'The alien died!',
     hpRanOut:'HP ran out!',
@@ -1888,7 +2020,8 @@ const T = {
     shopChooseItem:'Choose item', closeLabel:'✕ Close',
     objectivesHdr:'Stage goals', buildLblColon:'Build:',
     bpUpgrade:'Upgrade', bpSell:'Sell',
-    actCollect:'Collect', actBeam:'Beam', actBuild:'Build', actShield:'Shield', actLightning:'Bolt', actType:'Type', actJump:'Jump',
+    actCollect:'Collect', actBeam:'Beam', actBuild:'Build', actShield:'Shield', actLightning:'Bolt', actType:'Type', actJump:'Jump', actRepairGnd:'Repair',
+    groundRepairedMsg:'Ground repaired!', dashMsg:'Space dash!',
     musicHint:'Music', flightNote:'✈️ Works in flight mode · Landscape only',
     voiceToggleLbl:'Voice Commands', voiceHint:'Voice Commands',
     voiceOn:'Voice commands on! Try saying "build" or "jump"',
@@ -1983,6 +2116,7 @@ function applyLang(){
   setText('lbl-homes',  'hudHomes');
   setText('lbl-hp',     'hudHP');
   setText('lbl-level',  'hudLevel');
+  setText('lbl-truck',  'hudTruck');
 
   // ── Stage screen ──
   setText('st-eyebrow',   'stageEyebrow');
@@ -2309,7 +2443,11 @@ function runSplash(){
 }
 
 let G={},P={},P2={}; // P2 declared here so resetAll can always reference it
-let crystals=[],buildings=[],meteors=[],particles=[],craters=[],companion=null,lightningBolts=[];
+let crystals=[],buildings=[],meteors=[],particles=[],craters=[],companion=null,lightningBolts=[],missiles=[],defenseTrucks=[];
+// ── SPACE DASH — double-tap ← or → to blink a short distance with brief
+// invincibility. _dashCd is the cooldown; _lastTapDir/_lastTapTime detect
+// the double-tap; _prevL/_prevR track rising edges of the move keys.
+let _dashCd=0,_lastTapDir=0,_lastTapTime=-10,_prevL=false,_prevR=false;
 let buildIdx=0,stageIdx=0,stageActive=false,gameMode='campaign';
 let keys={},touch={};
 let shakeX=0,shakeY=0,shakeTimer=0;
@@ -2380,6 +2518,21 @@ function openBldPopup(b,sx,sy){
 }
 function closeBldPopup(){document.getElementById('bld-popup').style.display='none';_bldTarget=null;G.paused=false;}
 
+// Native confirm()/alert()/prompt() are silent no-ops when this page runs
+// in iOS "Add to Home Screen" standalone mode (the exact mode the
+// apple-mobile-web-app-capable meta tag above turns on) — pressing a
+// button that called confirm() would look like nothing happened at all.
+// This is a self-styled replacement that works everywhere.
+function askConfirm(msg,yesLabel,noLabel,onYes){
+  const modal=document.getElementById('confirm-modal');
+  document.getElementById('confirm-msg').textContent=msg;
+  const yesBtn=document.getElementById('confirm-yes'),noBtn=document.getElementById('confirm-no');
+  yesBtn.textContent=yesLabel;noBtn.textContent=noLabel;
+  modal.style.display='flex';G.paused=true;
+  yesBtn.onclick=()=>{modal.style.display='none';G.paused=false;onYes();};
+  noBtn.onclick=()=>{modal.style.display='none';G.paused=false;};
+}
+
 // ════════════════════════════════════════════════════════════
 // SCREENS & GAME INIT
 // ════════════════════════════════════════════════════════════
@@ -2440,7 +2593,7 @@ function resetAll(){
   const ww=worldW()||W*3;
   P={wx:ww/2-80,y:GY-40,vy:0,onGround:true,dir:1,invT:0,hit:false,jetOn:false,jumping:false};
   P2={wx:ww/2+80,y:GY-40,vy:0,onGround:true,dir:-1,invT:0,hit:false,jetOn:false,jumping:false,active:coopMode};
-  crystals=[];buildings=[];meteors=[];particles=[];craters=[];companion=null;lightningBolts=[];powerups=[];_nextPowerupT=30;bossWaveActive=false;bossWaveT=0;
+  crystals=[];buildings=[];meteors=[];particles=[];craters=[];companion=null;lightningBolts=[];missiles=[];defenseTrucks=[];powerups=[];_nextPowerupT=30;bossWaveActive=false;bossWaveT=0;
   buildIdx=0;stageIdx=0;stageActive=false;camX=0;shakeX=shakeY=shakeTimer=0;
   _bldTarget=null;_shopOpen=false;_specialEv=null;_specialEvT=0;
   document.getElementById('bld-popup').style.display='none';
@@ -2454,12 +2607,91 @@ function resetAll(){
 }
 function spawnCrystals(n){const ww=worldW()||W*3;for(let i=0;i<n;i++){const wx=rnd(60,ww-60);const tc=currentTheme();crystals.push({wx,y:groundAt(wx)-14,r:rnd(7,13),color:pick(tc.crystalColors||COLORS),pulse:rnd(0,6.28),floatY:rnd(0,6.28),val:irnd(1,3)});}}
 function spawnMeteor(big=false){const ww=worldW()||W*3;const r=big?rnd(28,44):rnd(8,18)+G.level*1.1;const wx=clamp(P.wx+rnd(-W*.45,W*.45),r,ww-r);meteors.push({wx,y:-r-10,vx:rnd(-2.2,2.2),vy:rnd(2,3.8)+G.level*.32,r,trail:[],isBoss:big,hp:big?3:1,glowP:0});}
+
+// ── AUTO-DEFENSE TRUCKS ──
+// A defense truck is a standalone mobile unit (not a building) that scans
+// for meteors whose straight-line trajectory will land within its
+// protection radius, then fires a homing missile. Each shot costs
+// MISSILE_FIRE_COST score; the truck won't fire if score can't cover it.
+function tickDefenseTowers(dt){
+  defenseTrucks.forEach(tr=>{
+    tr.cd=(tr.cd||0)-dt;
+    if(tr.cd>0)return;
+    if(G.score<MISSILE_FIRE_COST)return;
+    let target=null,bestD=99999;
+    for(const m of meteors){
+      const d=Math.hypot(m.wx-tr.wx,m.y-tr.y);
+      if(d>460)continue;
+      if(m.vy<=0)continue;
+      const tGround=(groundAt(m.wx)-m.y)/m.vy;
+      if(tGround<0)continue;
+      const predX=m.wx+m.vx*tGround;
+      if(Math.abs(predX-tr.wx)<170&&d<bestD){bestD=d;target=m;}
+    }
+    if(target){
+      G.score-=MISSILE_FIRE_COST;updateHUD();
+      missiles.push({wx:tr.wx,y:tr.y-26,target,life:1});
+      tr.cd=1.05;sfx(680,.07,'square',.05,3.2);
+    }
+  });
+  missiles=missiles.filter(ms=>{
+    if(!meteors.includes(ms.target))return false;
+    const dx=ms.target.wx-ms.wx,dy=ms.target.y-ms.y,d=Math.hypot(dx,dy)||1;
+    if(d<24){
+      ms.target.hp-=1;
+      if(ms.target.hp<=0){
+        meteors=meteors.filter(m=>m!==ms.target);
+        if(ms.target.isBoss){G._bossKills++;G._bossSpawnT=9;spop(wtW(ms.target.wx),ms.target.y,'💥 BOSS!','#ff00ff');}
+        G.score+=ms.target.isBoss?45:8;G.xp+=ms.target.isBoss?25:8;
+        burst(ms.target.wx,ms.target.y,'#ff4466',18,6);sfxHit();screenShake(6,12);
+        updateHUD();checkLvl();
+      }else{
+        burst(ms.target.wx,ms.target.y,'#ff8866',6,3);
+      }
+      return false;
+    }
+    const spd=11;ms.wx+=dx/d*spd;ms.y+=dy/d*spd;
+    ms.trail=ms.trail||[];ms.trail.push({wx:ms.wx,y:ms.y});if(ms.trail.length>6)ms.trail.shift();
+    return true;
+  });
+}
+function buyDefenseTruck(){
+  if(!G.running||G.paused)return;
+  if(G.score<TRUCK_COST){toast('❌ '+t('truckNeed')+' '+TRUCK_COST+'⭐ ('+Math.floor(G.score)+'/'+TRUCK_COST+')');haptic(40);return;}
+  askConfirm(t('truckConfirm')+' '+TRUCK_COST+'⭐?', t('confirmYes'), t('confirmCancel'), ()=>{
+    G.score-=TRUCK_COST;
+    const ww=worldW()||W*3;const dir=P.dir||1;
+    let spawnX=P.wx;
+    while(defenseTrucks.some(t2=>Math.abs(t2.wx-spawnX)<70)) spawnX+=70*dir;
+    spawnX=clamp(spawnX,20,ww-20);
+    defenseTrucks.push({wx:spawnX,y:groundAt(spawnX),cd:0,dir});
+    sfxBuild();haptic(60);toast('🚚 '+t('truckBought'));updateHUD();
+  });
+}
+function detachTruck(tr){
+  askConfirm(t('truckDetachConfirm'), t('confirmYes'), t('confirmCancel'), ()=>{
+    defenseTrucks=defenseTrucks.filter(t2=>t2!==tr);
+    const refund=Math.floor(TRUCK_COST*.5);
+    G.score+=refund;
+    toast('🔧 '+t('truckDetached')+' +'+refund+'⭐');
+    updateHUD();
+  });
+}
 function spawnCompanion(){companion={wx:P.wx+50,y:P.y,phase:0};}
+function doDash(dir){
+  const ww=worldW()||W*3;
+  const fromX=P.wx,toX=clamp(P.wx+dir*140,20,ww-20);
+  for(let i=0;i<6;i++){const ix=lerp(fromX,toX,i/6);burst(ix,P.y-10,'#00f5ff',3,2);}
+  P.wx=toX;P.invT=Math.max(P.invT,26);_dashCd=1.4;
+  screenShake(3,6);sfx(920,.09,'sawtooth',.07,5);haptic(28);
+  toast('💫 '+t('dashMsg'));
+}
 
 // ════════════════════════════════════════════════════════════
 // ACTIONS
 // ════════════════════════════════════════════════════════════
 function doBuild(){
+  if(groundDamagedNear(P.wx)){repairGround();return;}
   const bd=BUILD_DATA[buildIdx];const cost=Math.floor(bd.cost*(G.up.fastBuild?.7:1));
   if(G.energy<cost){toast(t('buildNoEnergy')+' '+cost+'⚡ '+t('buildPlace')+' '+tt(bd.name));haptic(55);return;}
   for(const b of buildings){if(Math.abs(b.wx-P.wx)<b.pw+12){toast(t('buildOccupied'));haptic(40);return;}}
@@ -2586,13 +2818,27 @@ function togglePause(){if(G.over)return;G.paused=!G.paused;document.getElementBy
 // ════════════════════════════════════════════════════════════
 // HUD UPDATE
 // ════════════════════════════════════════════════════════════
-function updateCycleBtn(){const el=document.getElementById('cycle-ico');if(el)el.textContent=BUILD_DATA[buildIdx].emoji;}
+function updateCycleBtn(){
+  const el=document.getElementById('cycle-ico');if(!el)return;
+  const lbl=document.getElementById('act-build-lbl');
+  if(P&&P.wx!==undefined&&groundDamagedNear(P.wx)){
+    el.textContent='🔧';if(lbl)lbl.textContent=t('actRepairGnd');
+  }else{
+    el.textContent=BUILD_DATA[buildIdx].emoji;if(lbl)lbl.textContent=t('actBuild');
+  }
+}
 function updateHUD(){
   document.getElementById('h-e').textContent=Math.floor(G.energy);
   document.getElementById('h-hp').textContent=G.hp;
   document.getElementById('h-homes').textContent=G.homes;
   document.getElementById('h-pop').textContent=G.pop;
   document.getElementById('h-score').textContent=G.score;
+  const hTruck=document.getElementById('h-truck'),stTruck=document.getElementById('stat-truck');
+  if(hTruck){
+    if(defenseTrucks.length>0){hTruck.textContent=defenseTrucks.length;}
+    else{hTruck.textContent=TRUCK_COST+'⭐';}
+    if(stTruck)stTruck.classList.toggle('afford', defenseTrucks.length===0 && G.score>=TRUCK_COST);
+  }
   document.getElementById('h-level').textContent=G.level;
   document.getElementById('xp-fill').style.width=(G.xp/G.xpNext*100)+'%';
   document.getElementById('xp-c').textContent=G.xp;document.getElementById('xp-m').textContent=G.xpNext;document.getElementById('xp-l').textContent=G.level;
@@ -2755,9 +3001,14 @@ function loop(ts=0){
   const movL=keys['ArrowLeft']||keys['a']||touch.left;
   const movR=keys['ArrowRight']||keys['d']||touch.right;
   const jumpK=keys['ArrowUp']||keys['w']||keys[' ']||touch.up;
+  if(_dashCd>0)_dashCd-=dt;
+  if(movL&&!_prevL){if(_lastTapDir===-1&&G.time-_lastTapTime<0.32&&_dashCd<=0)doDash(-1);_lastTapDir=-1;_lastTapTime=G.time;}
+  if(movR&&!_prevR){if(_lastTapDir===1&&G.time-_lastTapTime<0.32&&_dashCd<=0)doDash(1);_lastTapDir=1;_lastTapTime=G.time;}
+  _prevL=movL;_prevR=movR;
   if(movL){P.wx-=3.3;P.dir=-1;}
   if(movR){P.wx+=3.3;P.dir=1;}
   P.wx=clamp(P.wx,20,ww-20);
+  updateCycleBtn();
   if(jumpK){if(P.onGround){P.vy=-13;P.onGround=false;P.jumping=true;sfx(200,.1,'sine',.07,2);}else if(G.up.jetpack){P.vy=Math.max(P.vy-.8,-10);P.jetOn=true;P.jumping=true;burst(P.wx,P.y+14,'#ff8800',2,2);}}else P.jetOn=false;
   const gnd=groundAt(P.wx)-22;
   if(P.jumping){
@@ -2810,6 +3061,7 @@ function loop(ts=0){
     m.wx+=m.vx;m.y+=m.vy;m.glowP+=.18;
     if(G.beamOn&&Math.abs(m.wx-P.wx)<18&&m.y<P.y-10){m.hp-=G.up.bossKiller?999:1;if(m.hp<=0){burst(m.wx,m.y,'#ff4400',22,8);sfxHit();screenShake(7,14);if(m.isBoss){G._bossKills++;G._bossSpawnT=9;spop(wtW(m.wx),m.y,'💥 BOSS!','#ff00ff');}G.score+=m.isBoss?60:10;G.xp+=m.isBoss?30:12;updateHUD();checkLvl();return false;}}
     if(m.y>groundAt(m.wx)+m.r){
+      damageGround(m.wx,m.r*2.4);
       craters.push({wx:m.wx,y:groundAt(m.wx),r:m.r*1.5,life:1});
       buildings=buildings.filter(b=>{if(Math.abs(m.wx-b.wx)<b.pw/2+m.r){b.damage++;if(b.damage>=2){G.homes--;G.pop-=b.pop;G.score=Math.max(0,G.score-30);burst(b.wx,b.y-b.ph/2,'#ff4400',28,7);sfxHit();haptic(90);toast('💥 '+tt(BUILD_DATA[b.type].name)+' '+t('destroyedSuffix'));updateHUD();return false;}else{burst(b.wx,b.y,'#ff8800',8,3);toast('⚠️ '+tt(BUILD_DATA[b.type].name)+' '+t('damagedSuffix'));}}return true;});
       burst(m.wx,groundAt(m.wx),'#ff6600',14,5);sfxHit();screenShake(9,18);return false;
@@ -2822,6 +3074,7 @@ function loop(ts=0){
   particles=particles.filter(p=>{p.wx+=p.vx;p.y+=p.vy;p.vy+=.12;p.life-=p.decay;return p.life>0;});
   craters=craters.filter(c=>{c.life-=dt*.04;return c.life>0;});
   lightningBolts=lightningBolts.filter(l=>{l.life--;return l.life>0;});
+  tickDefenseTowers(dt);
   if(Math.floor(G.time)%7===0&&Math.floor(G.time)!==Math.floor(G.time-dt)){G.xp+=3;checkLvl();}
   if(shakeTimer>0){shakeTimer--;shakeX=lerp(shakeX,0,.3);shakeY=lerp(shakeY,0,.3);}else shakeX=shakeY=0;
   updateHUD();updateBuildPanel();drawMinimap();
@@ -2894,7 +3147,22 @@ function render(){
     if(b.damage>0){ctx.strokeStyle='rgba(255,80,0,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(bx+b.pw*.28,by+b.ph*.18);ctx.lineTo(bx+b.pw*.6,by+b.ph*.5);ctx.lineTo(bx+b.pw*.38,by+b.ph*.72);ctx.stroke();}
     ctx.restore();
   });
-  // meteors
+  // defense trucks — mobile, standalone units (not part of `buildings`)
+  defenseTrucks.forEach(tr=>{
+    const scx=wtW(tr.wx);if(scx<-60||scx>W+60)return;
+    ctx.save();
+    ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(scx,tr.y,26,4,0,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=10;ctx.shadowColor='#ff4466';
+    ctx.font='30px serif';ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    ctx.save();if((tr.dir||1)===-1)ctx.scale(-1,1);
+    ctx.fillText('🚚',(tr.dir||1)===-1?-scx:scx,tr.y-2);
+    ctx.restore();
+    ctx.font='16px serif';ctx.fillText('📡',scx+10,tr.y-30);
+    const sweep=(G.time*3)%(Math.PI*2);
+    ctx.strokeStyle='rgba(255,80,100,.35)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(scx+10,tr.y-36);ctx.lineTo(scx+10+Math.cos(sweep)*38,tr.y-36+Math.sin(sweep)*38*.4-8);ctx.stroke();
+    ctx.restore();
+  });
   meteors.forEach(m=>{
     const scx=wtW(m.wx);if(scx<-m.r*4||scx>W+m.r*4)return;
     m.trail.forEach((t,i)=>{const tscx=wtW(t.wx);const a=(i/m.trail.length)*.62,r=m.r*(i/m.trail.length)*.78;ctx.beginPath();ctx.arc(tscx,t.y,r,0,Math.PI*2);ctx.fillStyle=`rgba(255,${m.isBoss?0:70+i*8},${m.isBoss?200:0},${a})`;ctx.fill();});
@@ -2908,6 +3176,13 @@ function render(){
   if(G.beamOn){const scpx=wtW(P.wx);ctx.save();const bg=ctx.createLinearGradient(scpx,P.y-20,scpx,0);bg.addColorStop(0,'rgba(255,255,0,.94)');bg.addColorStop(1,'rgba(255,200,0,0)');ctx.shadowBlur=44;ctx.shadowColor='#ffff00';ctx.fillStyle=bg;ctx.fillRect(scpx-9,0,18,P.y-20);ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.strokeRect(scpx-9,0,18,P.y-20);ctx.restore();}
   // lightning
   lightningBolts.forEach(l=>{ctx.save();ctx.strokeStyle=`rgba(191,95,255,${l.life/12})`;ctx.lineWidth=2+l.life*.15;ctx.shadowBlur=18;ctx.shadowColor='#bf5fff';ctx.beginPath();ctx.moveTo(l.x1,l.y1);const mx=(l.x1+l.x2)/2+rnd(-28,28),my=(l.y1+l.y2)/2+rnd(-18,18);ctx.quadraticCurveTo(mx,my,l.x2,l.y2);ctx.stroke();ctx.restore();});
+  missiles.forEach(ms=>{
+    const scx=wtW(ms.wx);ctx.save();
+    if(ms.trail)ms.trail.forEach((tp,i)=>{ctx.beginPath();ctx.arc(wtW(tp.wx),tp.y,2.4*(i/ms.trail.length),0,Math.PI*2);ctx.fillStyle=`rgba(255,80,100,${.35*(i/ms.trail.length)})`;ctx.fill();});
+    ctx.shadowBlur=14;ctx.shadowColor='#ff4466';ctx.fillStyle='#ffdde0';
+    ctx.beginPath();ctx.arc(scx,ms.y,4,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
   // companion
   if(companion){const cscx=wtW(companion.wx||P.wx);ctx.save();ctx.shadowBlur=12;ctx.shadowColor='#00ff88';ctx.fillStyle='#ffffff';ctx.font='21px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('👾',cscx,companion.y);ctx.strokeStyle='rgba(0,255,136,.25)';ctx.lineWidth=1;ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(cscx,companion.y);ctx.lineTo(wtW(P.wx),P.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
   // particles
@@ -3108,6 +3383,16 @@ function setupBtn(id,onDown,onUp){
   el.addEventListener('pointerdown',e=>{e.preventDefault();el.setPointerCapture(e.pointerId);el.classList.add('held');if(onDown)onDown();},{passive:false});
   el.addEventListener('pointerup',  e=>{el.classList.remove('held');if(onUp)onUp();});
   el.addEventListener('pointercancel',e=>{el.classList.remove('held');if(onUp)onUp();});
+  // A long, held pointerdown (exactly how these buttons are normally
+  // used) is also the gesture some mobile browsers use to trigger the
+  // text-selection magnifier/loupe or a native context menu, which then
+  // steals the touch away from the game — the button stops responding
+  // mid-press. preventDefault() on pointerdown alone doesn't reliably
+  // stop this on every browser, so also block the two events that
+  // actually start that gesture.
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('selectstart',e=>e.preventDefault());
+  el.addEventListener('dragstart',e=>e.preventDefault());
 }
 setupBtn('dp-left',  ()=>touch.left=true,  ()=>touch.left=false);
 setupBtn('dp-right', ()=>touch.right=true, ()=>touch.right=false);
@@ -3116,6 +3401,8 @@ setupBtn('btn-collect',   ()=>doCollect(),   null);
 setupBtn('btn-beam',      ()=>doBeam(),      null);
 setupBtn('btn-shield',    ()=>doShield(),    null);
 setupBtn('btn-lightning', ()=>doLightning(), null);
+setupBtn('stat-pause', ()=>togglePause(), null);
+setupBtn('stat-truck', ()=>buyDefenseTruck(), null);
 
 // Build button: quick tap builds; holding it down ~450ms cycles the
 // selected building type instead — merges what used to be two separate
@@ -3137,10 +3424,15 @@ setupBtn('btn-lightning', ()=>doLightning(), null);
     if(!didHold) doBuild();
   });
   el.addEventListener('pointercancel', ()=>{ el.classList.remove('held'); clearTimeout(holdT); });
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('selectstart',e=>e.preventDefault());
+  el.addEventListener('dragstart',e=>e.preventDefault());
 })();
 
 document.querySelectorAll('.bi').forEach(el=>{
   el.addEventListener('pointerdown',e=>{e.preventDefault();buildIdx=parseInt(el.dataset.i);updateBuildPanel();toast('🏗️ '+tt(BUILD_DATA[buildIdx].name));sfxUI();},{passive:false});
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('selectstart',e=>e.preventDefault());
 });
 
 // canvas tap → building popup
@@ -3148,6 +3440,7 @@ cGame.addEventListener('click',e=>{
   if(!G.running||G.paused||_bldTarget)return;
   const wx=e.clientX+camX;
   for(const b of buildings){const bscx=wtW(b.wx);if(Math.abs(bscx-e.clientX)<b.pw/2+8&&e.clientY>b.y-b.ph-8&&e.clientY<b.y+8){openBldPopup(b,e.clientX,e.clientY);return;}}
+  for(const tr of defenseTrucks){const tscx=wtW(tr.wx);if(Math.abs(tscx-e.clientX)<38&&e.clientY>tr.y-46&&e.clientY<tr.y+8){detachTruck(tr);return;}}
   closeBldPopup();
 });
 
