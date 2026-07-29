@@ -78,7 +78,7 @@ input, textarea {
   --build-h: clamp(40px, 8vmin, 54px);
 
   /* Typography */
-  --hud-fs: clamp(10px, 1.8vmin, 14px);
+  --hud-fs: clamp(11px, 2.6vmin, 19px);
 
   /* Colors */
   --blue:   #00f5ff;
@@ -308,7 +308,7 @@ canvas {
   position:fixed; top:38%; left:50%; transform:translate(-50%,-50%);
   z-index:20; background:rgba(0,8,36,.94); border:1px solid var(--border);
   border-radius:clamp(10px,2.5vmin,18px); padding:clamp(5px,1.2vmin,8px) clamp(10px,2.5vmin,18px);
-  font-family:'Orbitron',monospace; font-size:calc(var(--hud-fs)*.82); letter-spacing:.1em;
+  font-family:'Orbitron',monospace; font-size:clamp(13px,4.1vmin,22px); letter-spacing:.08em;
   color:#fff; pointer-events:none; opacity:0; transition:opacity .28s;
   max-width:72vw; text-align:center; white-space:normal;
 }
@@ -325,8 +325,8 @@ canvas {
   width:clamp(160px,30vw,220px);
 }
 #achieve .a-ico   { font-size:clamp(16px,3.5vmin,22px); }
-#achieve .a-title { font-family:'Orbitron',monospace; font-size:calc(var(--hud-fs)*.88); font-weight:700; color:var(--gold); }
-#achieve .a-desc  { font-size:calc(var(--hud-fs)*.72); color:rgba(255,255,255,.44); margin-top:1px; }
+#achieve .a-title { font-family:'Orbitron',monospace; font-size:clamp(12px,3.6vmin,20px); font-weight:700; color:var(--gold); }
+#achieve .a-desc  { font-size:clamp(10px,3.1vmin,16px); color:rgba(255,255,255,.44); margin-top:1px; }
 
 /* ════════════════════════════════════════════════════════════
    CONTROLS — two zones at bottom corners, separated by build panel
@@ -666,13 +666,13 @@ canvas {
 }
 .st-eyebrow { font-family:'Orbitron',monospace; font-size:calc(var(--hud-fs)*.7); letter-spacing:.3em; color:var(--blue); opacity:.6; margin-bottom:4px; }
 .st-num { font-family:'Orbitron',monospace; font-weight:900; line-height:1; font-size:clamp(40px,10vmin,68px); background:linear-gradient(135deg,var(--blue),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:2px; }
-.st-title  { font-family:'Orbitron',monospace; font-weight:700; color:#fff; margin-bottom:6px; font-size:clamp(13px,3vmin,20px); }
-.st-story  { font-size:clamp(10px,2.1vmin,13px); color:rgba(255,255,255,.58); line-height:1.7; margin-bottom:12px; }
+.st-title  { font-family:'Orbitron',monospace; font-weight:700; color:#fff; margin-bottom:6px; font-size:clamp(16px,4.6vmin,30px); }
+.st-story  { font-size:clamp(12px,3.5vmin,20px); color:rgba(255,255,255,.68); line-height:1.7; margin-bottom:12px; }
 .st-goals-box { background:rgba(0,245,255,.04); border:1px solid rgba(0,245,255,.12); border-radius:var(--radius); padding:clamp(9px,2vmin,12px) clamp(10px,2.4vmin,14px); margin-bottom:12px; text-align:right; }
-.st-goals-hdr { font-family:'Orbitron',monospace; font-size:calc(var(--hud-fs)*.68); letter-spacing:.25em; color:var(--blue); opacity:.6; margin-bottom:7px; text-align:center; }
-.st-goal { display:flex; align-items:center; gap:7px; padding:3px 0; font-size:clamp(9px,2vmin,11px); color:rgba(255,255,255,.75); border-bottom:1px solid rgba(255,255,255,.05); }
+.st-goals-hdr { font-family:'Orbitron',monospace; font-size:clamp(10px,2.9vmin,16px); letter-spacing:.25em; color:var(--blue); opacity:.7; margin-bottom:7px; text-align:center; }
+.st-goal { display:flex; align-items:center; gap:7px; padding:4px 0; font-size:clamp(11px,3.2vmin,18px); color:rgba(255,255,255,.85); border-bottom:1px solid rgba(255,255,255,.05); }
 .st-goal:last-child { border-bottom:none; }
-.st-goal-ico { font-size:clamp(11px,2.5vmin,14px); width:18px; text-align:center; }
+.st-goal-ico { font-size:clamp(13px,3.6vmin,21px); width:20px; text-align:center; }
 .st-reward { font-size:clamp(9px,1.9vmin,10px); color:var(--gold); letter-spacing:.1em; margin-bottom:12px; font-family:'Orbitron',monospace; }
 
 /* Shop */
@@ -1044,6 +1044,11 @@ canvas {
         <span id="change-char-emoji" style="font-size:clamp(18px,4vmin,24px);">👽</span>
         <span id="change-char-name" style="font-family:'Orbitron',monospace;font-size:clamp(9px,2vmin,12px);color:rgba(255,255,255,.75);letter-spacing:.05em;">חייזר קלאסי</span>
         <span style="font-size:clamp(11px,2.4vmin,14px);color:rgba(0,245,255,.8);">🔄</span>
+      </div>
+      <div class="mode-btn" id="continue-btn" onclick="resumeGame()" style="display:none;margin-bottom:8px;border-color:var(--gold);">
+        <span class="m-ico">💾</span>
+        <div class="m-title" id="continue-title">המשך משחק</div>
+        <div class="m-desc" id="continue-desc"></div>
       </div>
       <div class="mode-row">
         <div class="mode-btn" onclick="startGame('campaign')"><span class="m-ico">🚀</span><div class="m-title">קמפיין</div><div class="m-desc">10 שלבים עם סיפור</div></div>
@@ -1701,10 +1706,22 @@ function groundDamagedNear(wx){
   for(let k=-5;k<=5;k++){const p=terrain[i+k];if(p&&p.dmg)return true;}
   return false;
 }
+function healBurst(wx,y,n=16){
+  for(let i=0;i<n;i++){
+    const a=rnd(-Math.PI*0.95,-Math.PI*0.05); // upward arc, not an outward "impact" scatter
+    const s=rnd(1.3,3.2);
+    particles.push({wx,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1.6,r:rnd(1.5,4),col:'#00ff88',life:1,decay:rnd(.018,.03)});
+  }
+}
 function repairGround(){
   const rad=44;let found=false;
   for(const p of terrain){if(p.dmg&&Math.abs(p.x-P.wx)<rad){p.h=p.origH;p.dmg=0;found=true;}}
-  if(found){G._groundRepairs=(G._groundRepairs||0)+1;burst(P.wx,groundAt(P.wx),'#a05a2c',14,4);sfxBuild();haptic(30);toast('🔧 '+t('groundRepairedMsg'));updateHUD();}
+  if(found){
+    G._groundRepairs=(G._groundRepairs||0)+1;
+    healBurst(P.wx,groundAt(P.wx));
+    spop(wtW(P.wx),P.y-24,'🔧 '+t('groundRepairedMsg'),'#00ff88');
+    sfxBuild();haptic(30);toast('🔧 '+t('groundRepairedMsg'));updateHUD();checkAchievements();
+  }
   return found;
 }
 
@@ -1732,6 +1749,7 @@ const UPGRADES=[
   {id:'jetpack',   name:{he:"🚀 ג'טפק",en:'🚀 Jetpack'},         desc:{he:'טוס! לחץ ▲ באוויר',en:'Fly! Press ▲ in mid-air'},      ico:'🚀'},
   {id:'bossKiller',name:{he:'💥 מפציץ',en:'💥 Demolisher'},         desc:{he:'קרן/ברק הורסים בוס',en:'Beam/lightning destroy bosses'},     ico:'💥'},
   {id:'regen',     name:{he:'💚 ריגן',en:'💚 Regen'},          desc:{he:'חיים מתאוששים מהר',en:'HP recovers fast'},      ico:'💚'},
+  {id:'truckRange',name:{he:'📡 טווח משופר',en:'📡 Extended Range'}, desc:{he:'משאיות טילים: טווח וקצב אש +50%',en:'Missile trucks: range & fire rate +50%'}, ico:'📡'},
 ];
 const SHOP_ITEMS=[
   {ico:'⚡',name:{he:'⚡ מטען',en:'⚡ Charge'},     desc:{he:'+80 אנרגיה',en:'+80 Energy'},           price:0, free:true,fn:()=>{G.energy+=80;}},
@@ -1873,6 +1891,9 @@ const T = {
     truckNeed:'צריך', truckConfirm:'לרכוש משאית טילים ב-', truckBought:'משאית טילים נפרסה!',
     truckDetachConfirm:'לנתק את משאית הטילים? תקבל החזר חלקי בניקוד.', truckDetached:'המשאית נותקה',
     confirmYes:'אישור', confirmCancel:'ביטול',
+    continueTitle:'המשך משחק', continueDesc:'שלב', resumedMsg:'המשחק שוחזר!',
+    overwriteSaveConfirm:'יש לך משחק שמור. התחלת קמפיין חדש תמחק אותו. להמשיך?',
+    hintDash:'הקש פעמיים מהר על ⬅️ או ➡️ כדי לדלג בחלל!', hintRepair:'לחץ על כפתור הבנייה כדי לתקן את הקרקע הפגועה!', hintTruck:'יש לך מספיק ניקוד למשאית טילים אוטומטית! לחץ למעלה 🚚',
     // Stage screen
     stageEyebrow:'שלב', stageGoalsHdr:'🎯 יעדי השלב',
     // Actions / toasts
@@ -1979,6 +2000,9 @@ const T = {
     truckNeed:'Need', truckConfirm:'Buy missile truck for', truckBought:'Missile truck deployed!',
     truckDetachConfirm:'Detach the missile truck? You\'ll get a partial score refund.', truckDetached:'Truck detached',
     confirmYes:'Confirm', confirmCancel:'Cancel',
+    continueTitle:'Continue', continueDesc:'Stage', resumedMsg:'Game restored!',
+    overwriteSaveConfirm:'You have a saved game. Starting a new campaign will erase it. Continue?',
+    hintDash:'Double-tap ⬅️ or ➡️ quickly to space-dash!', hintRepair:'Press the build button to repair the damaged ground!', hintTruck:'You have enough score for an auto-defense missile truck! Tap 🚚 above', 
     // Stage screen
     stageEyebrow:'Stage', stageGoalsHdr:'🎯 Stage Goals',
     // Actions / toasts
@@ -2397,6 +2421,7 @@ function showIntro(){
   const lbl = document.getElementById('coop-lbl');
   if(lbl) lbl.textContent = t(coopMode?'coopOn':'coopOff');
   updateChangeCharChip();
+  refreshContinueButton();
 }
 // Reflect the currently-selected character on the mode-select screen's chip.
 function updateChangeCharChip(){
@@ -2534,6 +2559,72 @@ function askConfirm(msg,yesLabel,noLabel,onYes){
 }
 
 // ════════════════════════════════════════════════════════════
+// SAVE / RESUME — campaign runs can span 10 stages; losing all of
+// it on an accidental tab-close was the single biggest paper-cut,
+// so checkpoint at natural break points (stage start, building
+// placed, truck bought/detached) plus a periodic safety-net save.
+// ════════════════════════════════════════════════════════════
+let _autosaveTimer=null;
+function saveGame(){
+  if(gameMode!=='campaign'||!G||!G.running||G.over)return;
+  try{
+    localStorage.setItem('pg6_save',JSON.stringify({v:1,stageIdx,gameMode,G,buildings,defenseTrucks,ts:Date.now()}));
+  }catch(e){}
+}
+function clearSave(){ try{localStorage.removeItem('pg6_save');}catch(e){} refreshContinueButton(); }
+function getSaveMeta(){
+  try{
+    const raw=localStorage.getItem('pg6_save');if(!raw)return null;
+    const s=JSON.parse(raw);
+    return {stageNum:(s.stageIdx||0)+1, score:(s.G&&s.G.score)||0};
+  }catch(e){return null;}
+}
+function refreshContinueButton(){
+  const btn=document.getElementById('continue-btn');if(!btn)return;
+  const meta=getSaveMeta();
+  if(!meta){btn.style.display='none';return;}
+  btn.style.display='flex';
+  document.getElementById('continue-title').textContent=t('continueTitle');
+  document.getElementById('continue-desc').textContent=t('continueDesc')+' '+meta.stageNum+' • '+meta.score+'⭐';
+}
+function resumeGame(){
+  const raw=localStorage.getItem('pg6_save');if(!raw)return;
+  let save;try{save=JSON.parse(raw);}catch(e){return;}
+  if(!save||!save.G)return;
+  gameMode=save.gameMode||'campaign';window._lastMode=gameMode;initAudio();
+  document.getElementById('s-intro').classList.add('off');
+  ['s-over','s-victory','s-pause'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('off');});
+  showUI(true);resize();
+  G=save.G;G.running=true;G.paused=false;G.over=false;
+  stageIdx=save.stageIdx||0;
+  buildings=save.buildings||[];defenseTrucks=save.defenseTrucks||[];
+  const ww=worldW()||W*3;
+  P={wx:ww/2-80,y:GY-40,vy:0,onGround:true,dir:1,invT:0,hit:false,jetOn:false,jumping:false};
+  P2={wx:ww/2+80,y:GY-40,vy:0,onGround:true,dir:-1,invT:0,hit:false,jetOn:false,jumping:false,active:coopMode};
+  // Note: character-ability bonuses were already baked into the saved G
+  // the first time the run started — re-applying them here would stack
+  // them a second time, so applyCharacterBonuses() is deliberately
+  // skipped on resume.
+  crystals=[];meteors=[];particles=[];craters=[];companion=null;lightningBolts=[];missiles=[];powerups=[];_nextPowerupT=30;bossWaveActive=false;bossWaveT=0;
+  buildIdx=0;stageActive=false;camX=0;shakeX=shakeY=shakeTimer=0;
+  _bldTarget=null;_shopOpen=false;_specialEv=null;_specialEvT=0;
+  document.getElementById('bld-popup').style.display='none';
+  document.getElementById('special-event').style.display='none';
+  initBg();buildTerrain();spawnCrystals(14);
+  updateHUD();updateBuildPanel();updateCycleBtn();
+  const s=STAGES[stageIdx]||STAGES[0];
+  G.meteorRate=s.meteorRate;stageActive=true;
+  document.getElementById('badge-n').textContent=s.num;document.getElementById('badge-t').textContent=s.title;
+  document.getElementById('stage-badge').style.display='block';
+  document.getElementById('objectives').style.display='block';
+  updateObjectives();
+  toast('🚀 '+t('resumedMsg'));
+  if(voiceEnabled) startVoiceRecognition();
+  if(!rafId)loop();
+}
+
+
+// ════════════════════════════════════════════════════════════
 // SCREENS & GAME INIT
 // ════════════════════════════════════════════════════════════
 function toIntro(){
@@ -2549,15 +2640,23 @@ function toIntro(){
   // Update char toggle label if coop changed
   const lbl=document.getElementById('coop-lbl');
   if(lbl)lbl.textContent=t(coopMode?'coopOn':'coopOff');
+  refreshContinueButton();
 }
 function startGame(mode){
+  if(mode==='campaign'&&getSaveMeta()){
+    askConfirm(t('overwriteSaveConfirm'),t('confirmYes'),t('confirmCancel'),()=>_startGameNow(mode));
+    return;
+  }
+  _startGameNow(mode);
+}
+function _startGameNow(mode){
   window._lastMode=mode;gameMode=mode;initAudio();
   document.getElementById('s-intro').classList.add('off');
   // Close any overlay (pause / game-over / victory) that this call may have
   // originated from — otherwise it stays on top of the fresh game and blocks
   // all further input.
   ['s-over','s-victory','s-pause'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('off');});
-  showUI(true);resize();resetAll();
+  showUI(true);resize();clearSave();resetAll();
   if(voiceEnabled) startVoiceRecognition();
 }
 function showUI(show){
@@ -2589,7 +2688,7 @@ function showUI(show){
   if(!show) stopVoiceRecognition(); // don't keep the mic listening on menus/game-over
 }
 function resetAll(){
-  G={running:true,paused:false,over:false,energy:20,hp:100,maxHp:100,_passiveMult:1,_beamCost:8,_shieldCost:5,_xpMult:1,_eventRate:1,homes:0,pop:0,score:0,level:1,xp:0,xpNext:100,time:0,dayPhase:0,passiveT:0,regenT:0,shieldOn:false,shieldT:0,beamOn:false,beamT:0,combo:0,comboT:0,lastCollect:0,weatherEv:null,meteorRate:.004,up:{doubleE:false,fastBuild:false,superShield:false,autoCollect:false,companion:false,magnet:false,jetpack:false,bossKiller:false,regen:false},_totalE:0,_waveT:0,_bossKills:0,_bossMode:false,_waveMode:false,_bossSpawnT:999,_crystalMult:1,_quaking:false,_windfall:false,_powerDown:false,_eventT:0};
+  G={running:true,paused:false,over:false,energy:20,hp:100,maxHp:100,_passiveMult:1,_beamCost:8,_shieldCost:5,_xpMult:1,_eventRate:1,homes:0,pop:0,score:0,level:1,xp:0,xpNext:100,time:0,dayPhase:0,passiveT:0,regenT:0,shieldOn:false,shieldT:0,beamOn:false,beamT:0,combo:0,comboT:0,lastCollect:0,weatherEv:null,meteorRate:.004,up:{doubleE:false,fastBuild:false,superShield:false,autoCollect:false,companion:false,magnet:false,jetpack:false,bossKiller:false,regen:false,truckRange:false},_totalE:0,_waveT:0,_bossKills:0,_bossMode:false,_waveMode:false,_bossSpawnT:999,_crystalMult:1,_quaking:false,_windfall:false,_powerDown:false,_eventT:0};
   const ww=worldW()||W*3;
   P={wx:ww/2-80,y:GY-40,vy:0,onGround:true,dir:1,invT:0,hit:false,jetOn:false,jumping:false};
   P2={wx:ww/2+80,y:GY-40,vy:0,onGround:true,dir:-1,invT:0,hit:false,jetOn:false,jumping:false,active:coopMode};
@@ -2614,6 +2713,7 @@ function spawnMeteor(big=false){const ww=worldW()||W*3;const r=big?rnd(28,44):rn
 // protection radius, then fires a homing missile. Each shot costs
 // MISSILE_FIRE_COST score; the truck won't fire if score can't cover it.
 function tickDefenseTowers(dt){
+  const rangeMult=G.up.truckRange?1.5:1;
   defenseTrucks.forEach(tr=>{
     tr.cd=(tr.cd||0)-dt;
     if(tr.cd>0)return;
@@ -2621,17 +2721,17 @@ function tickDefenseTowers(dt){
     let target=null,bestD=99999;
     for(const m of meteors){
       const d=Math.hypot(m.wx-tr.wx,m.y-tr.y);
-      if(d>460)continue;
+      if(d>460*rangeMult)continue;
       if(m.vy<=0)continue;
       const tGround=(groundAt(m.wx)-m.y)/m.vy;
       if(tGround<0)continue;
       const predX=m.wx+m.vx*tGround;
-      if(Math.abs(predX-tr.wx)<170&&d<bestD){bestD=d;target=m;}
+      if(Math.abs(predX-tr.wx)<170*rangeMult&&d<bestD){bestD=d;target=m;}
     }
     if(target){
       G.score-=MISSILE_FIRE_COST;updateHUD();
       missiles.push({wx:tr.wx,y:tr.y-26,target,life:1});
-      tr.cd=1.05;sfx(680,.07,'square',.05,3.2);
+      tr.cd=G.up.truckRange?0.7:1.05;sfx(680,.07,'square',.05,3.2);
     }
   });
   missiles=missiles.filter(ms=>{
@@ -2644,7 +2744,8 @@ function tickDefenseTowers(dt){
         if(ms.target.isBoss){G._bossKills++;G._bossSpawnT=9;spop(wtW(ms.target.wx),ms.target.y,'💥 BOSS!','#ff00ff');}
         G.score+=ms.target.isBoss?45:8;G.xp+=ms.target.isBoss?25:8;
         burst(ms.target.wx,ms.target.y,'#ff4466',18,6);sfxHit();screenShake(6,12);
-        updateHUD();checkLvl();
+        G._truckKills=(G._truckKills||0)+1;
+        updateHUD();checkLvl();checkAchievements();
       }else{
         burst(ms.target.wx,ms.target.y,'#ff8866',6,3);
       }
@@ -2665,7 +2766,7 @@ function buyDefenseTruck(){
     while(defenseTrucks.some(t2=>Math.abs(t2.wx-spawnX)<70)) spawnX+=70*dir;
     spawnX=clamp(spawnX,20,ww-20);
     defenseTrucks.push({wx:spawnX,y:groundAt(spawnX),cd:0,dir});
-    sfxBuild();haptic(60);toast('🚚 '+t('truckBought'));updateHUD();
+    sfxBuild();haptic(60);toast('🚚 '+t('truckBought'));updateHUD();saveGame();checkAchievements();
   });
 }
 function detachTruck(tr){
@@ -2674,7 +2775,7 @@ function detachTruck(tr){
     const refund=Math.floor(TRUCK_COST*.5);
     G.score+=refund;
     toast('🔧 '+t('truckDetached')+' +'+refund+'⭐');
-    updateHUD();
+    updateHUD();saveGame();
   });
 }
 function spawnCompanion(){companion={wx:P.wx+50,y:P.y,phase:0};}
@@ -2685,6 +2786,7 @@ function doDash(dir){
   P.wx=toX;P.invT=Math.max(P.invT,26);_dashCd=1.4;
   screenShake(3,6);sfx(920,.09,'sawtooth',.07,5);haptic(28);
   toast('💫 '+t('dashMsg'));
+  G._dashCount=(G._dashCount||0)+1;checkAchievements();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2700,7 +2802,7 @@ function doBuild(){
   G.homes++;G.pop+=bd.pop;G.score+=bd.cost*2;G.xp+=bd.xpg;
   burst(P.wx,gnd-bd.ph/2,bd.col,20,5);sfxBuild();haptic(50);
   spop(wtW(P.wx),P.y-24,'🏗️ +'+bd.pop+'👽',bd.col);
-  toast('✅ '+tt(bd.name)+' '+t('builtSuffix'));updateHUD();updateBuildPanel();checkLvl();
+  toast('✅ '+tt(bd.name)+' '+t('builtSuffix'));updateHUD();updateBuildPanel();checkLvl();saveGame();
 }
 function doCollect(){
   let got=false;
@@ -2734,10 +2836,35 @@ function doLightning(){
 function burst(wx,y,col,n=10,rm=4){for(let i=0;i<n;i++){const a=rnd(0,Math.PI*2),s=rnd(1.5,4.5);particles.push({wx,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1,r:rnd(1,rm),col,life:1,decay:rnd(.02,.04)});}}
 function screenShake(amt,dur){shakeTimer=dur;shakeX=shakeY=amt;}
 function spop(sx,y,txt,col='#ffd700'){const el=document.createElement('div');el.className='spop';el.textContent=txt;el.style.cssText=`left:${clamp(sx-30,0,W-80)}px;top:${clamp(y-30,20,H-60)}px;color:${col};`;document.body.appendChild(el);setTimeout(()=>el.remove(),1150);}
+function hintOnce(key,msg){
+  const k='pg6_seen_'+key;
+  try{ if(localStorage.getItem(k))return; localStorage.setItem(k,'1'); }catch(e){}
+  setTimeout(()=>toast(msg),300);
+}
 let toastT;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.opacity='1';clearTimeout(toastT);toastT=setTimeout(()=>el.style.opacity='0',2200);}
 let achT;
 function showAch(ico,t,d){document.getElementById('ach-ico').textContent=ico;document.getElementById('ach-title').textContent=t;document.getElementById('ach-desc').textContent=d;const el=document.getElementById('achieve');el.style.opacity='1';sfxLvl();clearTimeout(achT);achT=setTimeout(()=>el.style.opacity='0',3200);}
+
+// ── ACHIEVEMENTS ──
+// showAch() already existed (the popup was built) but nothing ever called
+// it — there was no achievement list or condition-checking behind it.
+const ACHIEVEMENTS=[
+  {id:'firstRepair', cond:()=>(G._groundRepairs||0)>=1, ico:'🔧', name:{he:'מהנדס קרקע',en:'Ground Engineer'}, desc:{he:'תיקנת קרטר ראשון',en:'Repaired your first crater'}},
+  {id:'firstTruck',  cond:()=>defenseTrucks.length>=1,  ico:'🚚', name:{he:'מגן הכוכב',en:'Planet Defender'},  desc:{he:'רכשת משאית טילים ראשונה',en:'Bought your first missile truck'}},
+  {id:'dash10',      cond:()=>(G._dashCount||0)>=10,    ico:'💫', name:{he:'רץ חלל',en:'Space Runner'},        desc:{he:'10 דילוגים בחלל',en:'10 space dashes'}},
+  {id:'truckKills10',cond:()=>(G._truckKills||0)>=10,   ico:'🎯', name:{he:'קלע-על',en:'Sharpshooter'},        desc:{he:'10 מטאורים יורטו על ידי משאיות',en:'10 meteors intercepted by trucks'}},
+];
+function checkAchievements(){
+  if(!G||!G.running)return;
+  ACHIEVEMENTS.forEach(a=>{
+    const key='pg6_ach_'+a.id;
+    let done=false;try{done=!!localStorage.getItem(key);}catch(e){}
+    if(done||!a.cond())return;
+    try{localStorage.setItem(key,'1');}catch(e){}
+    showAch(a.ico,tt(a.name),tt(a.desc));
+  });
+}
 
 // ════════════════════════════════════════════════════════════
 // LEVEL UP
@@ -2785,6 +2912,8 @@ function beginStage(){
   updateObjectives();
   if(s.bossMode){meteors=[];toast('👹 בוס מגיע!');}
   if(s.waveMode)toast('⚡ סערה! שרוד 45 שניות!');
+  if(stageIdx===0)setTimeout(()=>hintOnce('dash','💫 '+t('hintDash')),4000);
+  saveGame();
 }
 function updateObjectives(){const s=STAGES[stageIdx],list=document.getElementById('obj-list');list.innerHTML='';s.goals.forEach(g=>{const done=g.check();const d=document.createElement('div');d.className='obj-row'+(done?' done':'');d.innerHTML=`<span class="obj-ico">${done?'✅':g.ico}</span><span>${g.text}</span>`;list.appendChild(d);});}
 function checkStageComplete(){if(!stageActive||gameMode!=='campaign')return;if(STAGES[stageIdx].goals.every(g=>g.check()))stageComplete();}
@@ -2799,7 +2928,7 @@ function stageComplete(){
   toast(t('stageComplete')+' '+s.num);
 }
 function gameOver(reason){
-  if(G.over)return;G.running=false;G.over=true;
+  if(G.over)return;G.running=false;G.over=true;clearSave();
   const lb=lbAdd(G.score,G.level,stageIdx+1,gameMode,playerName());
   document.getElementById('os-score').textContent=G.score;document.getElementById('os-level').textContent=G.level;document.getElementById('os-time').textContent=Math.floor(G.time);
   document.getElementById('over-reason').textContent=reason||t('overReason');
@@ -2807,7 +2936,7 @@ function gameOver(reason){
   showUI(false);document.getElementById('s-over').classList.remove('off');
 }
 function showVictory(){
-  G.running=false;const lb=lbAdd(G.score,G.level,7,gameMode,playerName());
+  G.running=false;clearSave();const lb=lbAdd(G.score,G.level,7,gameMode,playerName());
   document.getElementById('vs-score').textContent=G.score;document.getElementById('vs-pop').textContent=G.pop;document.getElementById('vs-time').textContent=Math.floor(G.time);
   document.getElementById('lb-victory').innerHTML=lbHTML(lb);
   showUI(false);document.getElementById('s-victory').classList.remove('off');
@@ -2818,11 +2947,17 @@ function togglePause(){if(G.over)return;G.paused=!G.paused;document.getElementBy
 // ════════════════════════════════════════════════════════════
 // HUD UPDATE
 // ════════════════════════════════════════════════════════════
+let _lastCycleState=null;
 function updateCycleBtn(){
+  const nearDmg=!!(P&&P.wx!==undefined&&groundDamagedNear(P.wx));
+  const state=nearDmg?'repair':buildIdx;
+  if(state===_lastCycleState)return; // nothing changed — skip the DOM writes every game buttons rely on running smoothly
+  _lastCycleState=state;
   const el=document.getElementById('cycle-ico');if(!el)return;
   const lbl=document.getElementById('act-build-lbl');
-  if(P&&P.wx!==undefined&&groundDamagedNear(P.wx)){
+  if(nearDmg){
     el.textContent='🔧';if(lbl)lbl.textContent=t('actRepairGnd');
+    hintOnce('repair','🔧 '+t('hintRepair'));
   }else{
     el.textContent=BUILD_DATA[buildIdx].emoji;if(lbl)lbl.textContent=t('actBuild');
   }
@@ -2837,7 +2972,9 @@ function updateHUD(){
   if(hTruck){
     if(defenseTrucks.length>0){hTruck.textContent=defenseTrucks.length;}
     else{hTruck.textContent=TRUCK_COST+'⭐';}
-    if(stTruck)stTruck.classList.toggle('afford', defenseTrucks.length===0 && G.score>=TRUCK_COST);
+    const canAfford=defenseTrucks.length===0 && G.score>=TRUCK_COST;
+    if(stTruck)stTruck.classList.toggle('afford', canAfford);
+    if(canAfford)hintOnce('truck','🚚 '+t('hintTruck'));
   }
   document.getElementById('h-level').textContent=G.level;
   document.getElementById('xp-fill').style.width=(G.xp/G.xpNext*100)+'%';
@@ -3005,8 +3142,9 @@ function loop(ts=0){
   if(movL&&!_prevL){if(_lastTapDir===-1&&G.time-_lastTapTime<0.32&&_dashCd<=0)doDash(-1);_lastTapDir=-1;_lastTapTime=G.time;}
   if(movR&&!_prevR){if(_lastTapDir===1&&G.time-_lastTapTime<0.32&&_dashCd<=0)doDash(1);_lastTapDir=1;_lastTapTime=G.time;}
   _prevL=movL;_prevR=movR;
-  if(movL){P.wx-=3.3;P.dir=-1;}
-  if(movR){P.wx+=3.3;P.dir=1;}
+  const moveSpd=groundDamagedNear(P.wx)?3.3*0.55:3.3;
+  if(movL){P.wx-=moveSpd;P.dir=-1;}
+  if(movR){P.wx+=moveSpd;P.dir=1;}
   P.wx=clamp(P.wx,20,ww-20);
   updateCycleBtn();
   if(jumpK){if(P.onGround){P.vy=-13;P.onGround=false;P.jumping=true;sfx(200,.1,'sine',.07,2);}else if(G.up.jetpack){P.vy=Math.max(P.vy-.8,-10);P.jetOn=true;P.jumping=true;burst(P.wx,P.y+14,'#ff8800',2,2);}}else P.jetOn=false;
@@ -3030,7 +3168,8 @@ function loop(ts=0){
     const p2R=keys['l']||keys['L']||touch2.right;
     const p2J=keys['i']||keys['I']||touch2.up;
     if(!P2.active)P2.active=true;
-    if(p2L){P2.wx-=3.3;P2.dir=-1;}if(p2R){P2.wx+=3.3;P2.dir=1;}
+    const p2Spd=groundDamagedNear(P2.wx)?3.3*0.55:3.3;
+    if(p2L){P2.wx-=p2Spd;P2.dir=-1;}if(p2R){P2.wx+=p2Spd;P2.dir=1;}
     P2.wx=clamp(P2.wx,20,worldW()-20);
     if(p2J&&P2.onGround){P2.vy=-13;P2.onGround=false;P2.jumping=true;}
     const gnd2=groundAt(P2.wx)-22;
@@ -3456,6 +3595,7 @@ function boot(){
   updateMusicBtns();
   updateMusicStyleLbl();
   updateVoiceBtns();
+  setInterval(saveGame,20000);
   runSplash();
 }
 if(document.readyState==='loading'){
