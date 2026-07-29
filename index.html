@@ -1501,7 +1501,40 @@ function sfx(f,d,t='sine',v=.09,sw=.5){
 const sfxUI=()=>sfx(440,.05,'sine',.06,1.2);
 const sfxCollect=c=>{sfx(280+c*45,.06,'sine',.08);sfx((280+c*45)*2,.04,'sine',.04);};
 const sfxBuild=()=>{sfx(200,.1,'square',.07);sfx(400,.08,'square',.05,2);};
-const sfxHit=()=>sfx(90,.35,'sawtooth',.16,.4);
+const sfxHit=()=>{
+  if(!AC)return;
+  try{
+    const t=AC.currentTime;
+    // low thump (pitch-dropping sine, like the music engine's kick)
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(masterGain);
+    o.type='sine';o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(35,t+.18);
+    g.gain.setValueAtTime(.16,t);g.gain.exponentialRampToValueAtTime(.001,t+.22);
+    o.start(t);o.stop(t+.25);
+    // noise crack (filtered burst, like the music engine's hi-hat)
+    const bufSize=AC.sampleRate*.12;
+    const buf=AC.createBuffer(1,bufSize,AC.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++)data[i]=(Math.random()*2-1)*(1-i/bufSize);
+    const src=AC.createBufferSource();src.buffer=buf;
+    const lpf=AC.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=2200;
+    const ng=AC.createGain();
+    src.connect(lpf);lpf.connect(ng);ng.connect(masterGain);
+    ng.gain.setValueAtTime(.11,t);ng.gain.exponentialRampToValueAtTime(.001,t+.14);
+    src.start(t);src.stop(t+.16);
+  }catch(e){}
+};
+const sfxMissileLaunch=()=>{
+  if(!AC)return;
+  try{
+    const t=AC.currentTime;
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(masterGain);
+    o.type='sawtooth';o.frequency.setValueAtTime(300,t);o.frequency.exponentialRampToValueAtTime(1300,t+.13);
+    g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(.09,t+.025);g.gain.exponentialRampToValueAtTime(.001,t+.16);
+    o.start(t);o.stop(t+.18);
+  }catch(e){}
+};
 const sfxShield=()=>sfx(700,.14,'sine',.08,.6);
 const sfxBeam=()=>sfx(1400,.18,'sawtooth',.07,.5);
 const sfxLightning=()=>{sfx(600,.04,'sawtooth',.12,2);sfx(200,.3,'sawtooth',.1,.3);};
@@ -1714,8 +1747,21 @@ function healBurst(wx,y,n=16){
   }
 }
 function repairGround(){
-  const rad=44;let found=false;
-  for(const p of terrain){if(p.dmg&&Math.abs(p.x-P.wx)<rad){p.h=p.origH;p.dmg=0;found=true;}}
+  const step=8,rad=44;
+  const i0=Math.max(0,Math.floor((P.wx-rad)/step)),i1=Math.min(terrain.length-1,Math.ceil((P.wx+rad)/step));
+  let found=false;
+  const seeds=[];
+  for(let i=i0;i<=i1;i++){ if(terrain[i]&&terrain[i].dmg) seeds.push(i); }
+  // Flood-fill outward from each seed so the WHOLE crater gets leveled,
+  // not just the part within `rad` — a wide crater (from a big meteor)
+  // is bigger than the detection radius, so only repairing the center
+  // left the rim still sunken, which looked like the repair did nothing.
+  seeds.forEach(seedI=>{
+    for(let dir=-1;dir<=1;dir+=2){
+      let i=seedI;
+      while(terrain[i]&&terrain[i].dmg){ terrain[i].h=terrain[i].origH; terrain[i].dmg=0; found=true; i+=dir; }
+    }
+  });
   if(found){
     G._groundRepairs=(G._groundRepairs||0)+1;
     healBurst(P.wx,groundAt(P.wx));
@@ -2731,7 +2777,7 @@ function tickDefenseTowers(dt){
     if(target){
       G.score-=MISSILE_FIRE_COST;updateHUD();
       missiles.push({wx:tr.wx,y:tr.y-26,target,life:1});
-      tr.cd=G.up.truckRange?0.7:1.05;sfx(680,.07,'square',.05,3.2);
+      tr.cd=G.up.truckRange?0.7:1.05;sfxMissileLaunch();
     }
   });
   missiles=missiles.filter(ms=>{
@@ -3142,9 +3188,8 @@ function loop(ts=0){
   if(movL&&!_prevL){if(_lastTapDir===-1&&G.time-_lastTapTime<0.32&&_dashCd<=0)doDash(-1);_lastTapDir=-1;_lastTapTime=G.time;}
   if(movR&&!_prevR){if(_lastTapDir===1&&G.time-_lastTapTime<0.32&&_dashCd<=0)doDash(1);_lastTapDir=1;_lastTapTime=G.time;}
   _prevL=movL;_prevR=movR;
-  const moveSpd=groundDamagedNear(P.wx)?3.3*0.55:3.3;
-  if(movL){P.wx-=moveSpd;P.dir=-1;}
-  if(movR){P.wx+=moveSpd;P.dir=1;}
+  if(movL){P.wx-=3.3;P.dir=-1;}
+  if(movR){P.wx+=3.3;P.dir=1;}
   P.wx=clamp(P.wx,20,ww-20);
   updateCycleBtn();
   if(jumpK){if(P.onGround){P.vy=-13;P.onGround=false;P.jumping=true;sfx(200,.1,'sine',.07,2);}else if(G.up.jetpack){P.vy=Math.max(P.vy-.8,-10);P.jetOn=true;P.jumping=true;burst(P.wx,P.y+14,'#ff8800',2,2);}}else P.jetOn=false;
@@ -3168,8 +3213,7 @@ function loop(ts=0){
     const p2R=keys['l']||keys['L']||touch2.right;
     const p2J=keys['i']||keys['I']||touch2.up;
     if(!P2.active)P2.active=true;
-    const p2Spd=groundDamagedNear(P2.wx)?3.3*0.55:3.3;
-    if(p2L){P2.wx-=p2Spd;P2.dir=-1;}if(p2R){P2.wx+=p2Spd;P2.dir=1;}
+    if(p2L){P2.wx-=3.3;P2.dir=-1;}if(p2R){P2.wx+=3.3;P2.dir=1;}
     P2.wx=clamp(P2.wx,20,worldW()-20);
     if(p2J&&P2.onGround){P2.vy=-13;P2.onGround=false;P2.jumping=true;}
     const gnd2=groundAt(P2.wx)-22;
@@ -3220,6 +3264,7 @@ function loop(ts=0){
   tickPowerups(dt);
   if(bossWaveActive)tickBossWave(dt);
   tickMusicMood(G.time);
+  tickMusicDanger(G.time);
   render();
 }
 
@@ -3272,16 +3317,67 @@ function render(){
     ctx.restore();
   }
   // buildings
+function shadeColor(hex,pct){
+  hex=(hex||'#888888').replace('#','');
+  if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
+  let r=parseInt(hex.substring(0,2),16)||128,g=parseInt(hex.substring(2,4),16)||128,b=parseInt(hex.substring(4,6),16)||128;
+  r=Math.max(0,Math.min(255,r+pct*2.55))|0;g=Math.max(0,Math.min(255,g+pct*2.55))|0;b=Math.max(0,Math.min(255,b+pct*2.55))|0;
+  return `rgb(${r},${g},${b})`;
+}
+// Custom-drawn silhouettes for each building type — replaces the earlier
+// generic "colored rounded box + emoji glyph" look with a distinct vector
+// shape per building, in the building's own theme color.
+function drawBuildingShape(type,bx,by,w,h,col,damage){
+  ctx.save();
+  const body=damage>0?col+'88':shadeColor(col,-6);
+  ctx.fillStyle=body;ctx.strokeStyle=damage>0?'#ff6600':shadeColor(col,-32);ctx.lineWidth=1.5;
+  if(type===0){ // House — base + peaked roof + door
+    const roofH=h*0.42;
+    ctx.beginPath();ctx.roundRect(bx,by+roofH,w,h-roofH,3);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx-3,by+roofH+1);ctx.lineTo(bx+w/2,by-1);ctx.lineTo(bx+w+3,by+roofH+1);ctx.closePath();
+    ctx.fillStyle=shadeColor(col,-18);ctx.fill();ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,.32)';ctx.beginPath();ctx.roundRect(bx+w*0.4,by+h-h*0.34,w*0.22,h*0.34,1.5);ctx.fill();
+  }else if(type===1){ // Tower — tapered lattice mast with a blinking beacon
+    const cx=bx+w/2;
+    ctx.beginPath();ctx.moveTo(cx-w*0.16,by+h);ctx.lineTo(cx-w*0.36,by+2);ctx.lineTo(cx+w*0.36,by+2);ctx.lineTo(cx+w*0.16,by+h);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=1;
+    for(let yy=by+h*0.18;yy<by+h*0.97;yy+=h*0.16){
+      const t=(yy-by)/h,ww=w*(0.36-0.2*t);
+      ctx.beginPath();ctx.moveTo(cx-ww,yy);ctx.lineTo(cx+ww,yy);ctx.stroke();
+    }
+    ctx.fillStyle=Math.sin(G.time*3)>0?'#ff3333':'#661515';
+    ctx.beginPath();ctx.arc(cx,by-1,2.6,0,Math.PI*2);ctx.fill();
+  }else if(type===2){ // Lab — domed roof + glass panel
+    ctx.beginPath();ctx.roundRect(bx,by+h*0.38,w,h*0.62,3);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(bx+w/2,by+h*0.38,w/2,Math.PI,0);ctx.closePath();
+    ctx.fillStyle=shadeColor(col,-14);ctx.fill();ctx.stroke();
+    ctx.fillStyle='rgba(160,225,255,.45)';
+    ctx.beginPath();ctx.ellipse(bx+w*0.36,by+h*0.24,w*0.13,w*0.09,-0.5,0,Math.PI*2);ctx.fill();
+  }else{ // Temple — twin pillars, lintel, and roof cap (torii-inspired)
+    const pw=w*0.15;
+    ctx.beginPath();ctx.rect(bx+w*0.09,by+h*0.16,pw,h*0.84);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.rect(bx+w*0.76,by+h*0.16,pw,h*0.84);ctx.fill();ctx.stroke();
+    ctx.fillStyle=shadeColor(col,-16);
+    ctx.beginPath();ctx.roundRect(bx-2,by,w+4,h*0.15,2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.roundRect(bx+w*0.05,by+h*0.14,w*0.9,h*0.065,2);ctx.fill();ctx.stroke();
+  }
+  ctx.restore();
+}
   buildings.forEach(b=>{
     const scx=wtW(b.wx)+(b._qoff||0);if(scx<-b.pw*2||scx>W+b.pw*2)return;
     if(b.buildP<1)b.buildP=Math.min(1,b.buildP+.045);
-    const bx=scx-b.pw/2,by=b.y-b.ph*b.buildP;
+    const bx=scx-b.pw/2,by=b.y-b.ph*b.buildP,fullBy=b.y-b.ph;
     ctx.save();ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(scx,b.y,b.pw/2,4,0,0,Math.PI*2);ctx.fill();
     ctx.shadowBlur=b.damage>0?20:6;ctx.shadowColor=b.damage>0?'#ff4400':b.col;
-    ctx.fillStyle=b.col+(b.damage>0?'88':'aa');ctx.strokeStyle=b.damage>0?'#ff6600':b.col;ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.roundRect(bx,by,b.pw,b.ph*b.buildP,4);ctx.fill();ctx.stroke();
+    // Reveal the full-height shape from the ground up as buildP grows,
+    // instead of squashing it vertically — looks like it's rising out of
+    // the ground rather than stretching into shape.
+    ctx.save();ctx.beginPath();ctx.rect(bx-4,by-4,b.pw+8,b.ph*b.buildP+30);ctx.clip();
+    drawBuildingShape(b.type,bx,fullBy,b.pw,b.ph,b.col,b.damage);
+    ctx.restore();
     if(night>.35&&b.buildP>=1){const wa=Math.min(1,(night-.35)/.4);for(let wx=bx+5;wx<bx+b.pw-10;wx+=12){for(let wy=by+6;wy<by+b.ph-8;wy+=13){const fl=Math.sin(b.lightP+G.time*3+wx+wy)>.2?1:.6;ctx.fillStyle=`rgba(255,230,100,${wa*.8*fl})`;ctx.beginPath();ctx.roundRect(wx,wy,6,8,1);ctx.fill();}}}
-    if(b.buildP>.5){ctx.shadowBlur=0;ctx.fillStyle='#ffffff';ctx.font=`${Math.min(b.pw,b.ph)*.5}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.emoji,scx,by+b.ph*b.buildP*.5);}
+    ctx.shadowBlur=0;
     if((b.level||1)>1){ctx.fillStyle='#ffd700';ctx.font='bold 9px Orbitron,monospace';ctx.textAlign='center';ctx.fillText('★'+(b.level),scx,by-4);}
     if(b.damage>0){ctx.strokeStyle='rgba(255,80,0,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(bx+b.pw*.28,by+b.ph*.18);ctx.lineTo(bx+b.pw*.6,by+b.ph*.5);ctx.lineTo(bx+b.pw*.38,by+b.ph*.72);ctx.stroke();}
     ctx.restore();
@@ -3292,14 +3388,35 @@ function render(){
     ctx.save();
     ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(scx,tr.y,26,4,0,0,Math.PI*2);ctx.fill();
     ctx.shadowBlur=10;ctx.shadowColor='#ff4466';
-    ctx.font='30px serif';ctx.textAlign='center';ctx.textBaseline='alphabetic';
-    ctx.save();if((tr.dir||1)===-1)ctx.scale(-1,1);
-    ctx.fillText('🚚',(tr.dir||1)===-1?-scx:scx,tr.y-2);
+    ctx.translate(scx,tr.y);if((tr.dir||1)===-1)ctx.scale(-1,1);
+    // wheels
+    ctx.strokeStyle='#000';ctx.lineWidth=1;
+    [-15,11].forEach(wx=>{
+      ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(wx,-6,6.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#4a4a4a';ctx.beginPath();ctx.arc(wx,-6,2.4,0,Math.PI*2);ctx.fill();
+    });
+    // angled chassis
+    const grad=ctx.createLinearGradient(0,-28,0,-9);
+    grad.addColorStop(0,'#ff7c90');grad.addColorStop(1,'#c22f45');
+    ctx.fillStyle=grad;ctx.strokeStyle='#7a1626';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(-22,-9);ctx.lineTo(-22,-20);ctx.lineTo(-14,-27);ctx.lineTo(18,-27);ctx.lineTo(22,-18);ctx.lineTo(22,-9);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    // cab window
+    ctx.fillStyle='rgba(180,230,255,.55)';
+    ctx.beginPath();ctx.moveTo(-11,-25);ctx.lineTo(3,-25);ctx.lineTo(3,-19);ctx.lineTo(-13,-19);ctx.closePath();ctx.fill();
+    // launcher tube
+    ctx.fillStyle='#3a3a3a';ctx.strokeStyle='#111';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(-19,-34,10,7,2);ctx.fill();ctx.stroke();
+    // radar mast
+    ctx.strokeStyle='#999';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(6,-27);ctx.lineTo(9,-40);ctx.stroke();
+    ctx.fillStyle='#ccc';ctx.beginPath();ctx.ellipse(9,-40,4,2,0.2,0,Math.PI*2);ctx.fill();
     ctx.restore();
-    ctx.font='16px serif';ctx.fillText('📡',scx+10,tr.y-30);
+    // radar sweep (screen-space, unaffected by chassis flip)
+    ctx.save();
     const sweep=(G.time*3)%(Math.PI*2);
     ctx.strokeStyle='rgba(255,80,100,.35)';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(scx+10,tr.y-36);ctx.lineTo(scx+10+Math.cos(sweep)*38,tr.y-36+Math.sin(sweep)*38*.4-8);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(scx+9,tr.y-40);ctx.lineTo(scx+9+Math.cos(sweep)*36,tr.y-40+Math.sin(sweep)*36*.4-6);ctx.stroke();
     ctx.restore();
   });
   meteors.forEach(m=>{
@@ -3308,7 +3425,23 @@ function render(){
     ctx.save();ctx.shadowBlur=m.isBoss?44:20;ctx.shadowColor=m.isBoss?'#ff00ff':'#ff6600';
     ctx.beginPath();ctx.arc(scx,m.y,m.r,0,Math.PI*2);ctx.fillStyle=m.isBoss?'#cc00cc':'#cc4400';ctx.fill();
     ctx.beginPath();ctx.arc(scx-m.r*.3,m.y-m.r*.3,m.r*.34,0,Math.PI*2);ctx.fillStyle='rgba(255,200,100,.68)';ctx.fill();
-    if(m.isBoss){ctx.fillStyle='rgba(0,0,0,.58)';ctx.fillRect(scx-22,m.y-m.r-12,44,6);ctx.fillStyle='#ff00ff';ctx.fillRect(scx-22,m.y-m.r-12,44*(m.hp/3),6);ctx.font='14px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('👹',scx,m.y);}
+function drawBossFace(scx,scy,r){
+  ctx.save();ctx.translate(scx,scy);
+  const s=r/26;
+  ctx.scale(s,s);
+  ctx.shadowBlur=9;ctx.shadowColor='#ffee00';ctx.fillStyle='#ffee00';
+  [[-9,-4,0.35],[9,-4,-0.35]].forEach(([ex,ey,rot])=>{
+    ctx.save();ctx.translate(ex,ey);ctx.rotate(rot);
+    ctx.beginPath();ctx.ellipse(0,0,5,2,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
+  ctx.shadowBlur=0;ctx.strokeStyle='#1a0010';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(-10,8);ctx.lineTo(-5,11);ctx.lineTo(-1,7);ctx.lineTo(4,11);ctx.lineTo(9,7);
+  ctx.stroke();
+  ctx.restore();
+}
+    if(m.isBoss){ctx.fillStyle='rgba(0,0,0,.58)';ctx.fillRect(scx-22,m.y-m.r-12,44,6);ctx.fillStyle='#ff00ff';ctx.fillRect(scx-22,m.y-m.r-12,44*(m.hp/3),6);drawBossFace(scx,m.y,m.r);}
     ctx.restore();
   });
   // beam
@@ -3323,7 +3456,18 @@ function render(){
     ctx.restore();
   });
   // companion
-  if(companion){const cscx=wtW(companion.wx||P.wx);ctx.save();ctx.shadowBlur=12;ctx.shadowColor='#00ff88';ctx.fillStyle='#ffffff';ctx.font='21px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('👾',cscx,companion.y);ctx.strokeStyle='rgba(0,255,136,.25)';ctx.lineWidth=1;ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(cscx,companion.y);ctx.lineTo(wtW(P.wx),P.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
+  if(companion){const cscx=wtW(companion.wx||P.wx);ctx.save();ctx.translate(cscx,companion.y);
+    ctx.strokeStyle='rgba(0,255,136,.25)';ctx.lineWidth=1;ctx.setLineDash([3,5]);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(wtW(P.wx)-cscx,P.y-companion.y);ctx.stroke();ctx.setLineDash([]);
+    const spin=G.time*2;
+    ctx.shadowBlur=12;ctx.shadowColor='#00ff88';
+    ctx.strokeStyle='rgba(0,255,136,.55)';ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.ellipse(0,0,9,3.4,spin*0.3,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='#0a3a28';ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#00ff88';ctx.beginPath();ctx.arc(0,0,3.4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=Math.sin(spin*3)>0?'#ffffff':'#00ff88';
+    ctx.beginPath();ctx.arc(Math.cos(spin)*9,Math.sin(spin)*3.4,1.4,0,Math.PI*2);ctx.fill();
+    ctx.restore();}
   // particles
   particles.forEach(p=>{const pscx=wtW(p.wx);if(pscx<-10||pscx>W+10)return;ctx.globalAlpha=p.life;ctx.beginPath();ctx.arc(pscx,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.col;ctx.fill();});ctx.globalAlpha=1;
   // powerups
@@ -3942,12 +4086,16 @@ function buildArpeggio(scale, root) {
 
 function schedulePerc(barStartT, vol) {
   if (!AC) return;
-  // Kick: beat 1
-  scheduleKick(barStartT, vol * 0.9);
-  // Kick: beat 3
-  scheduleKick(barStartT + BEAT_LEN * 2, vol * 0.7);
-  // Hi-hat: every 2 beats (softer at night)
-  [0.5, 1, 1.5, 2, 2.5, 3, 3.5].forEach(b => scheduleHat(barStartT + b * BEAT_LEN, vol * 0.3));
+  const d=_dangerLevel;
+  // Kick: beat 1, plus extra off-beat kicks when danger is high
+  scheduleKick(barStartT, vol * (0.9+d*0.3));
+  scheduleKick(barStartT + BEAT_LEN * 2, vol * (0.7+d*0.3));
+  if(d>0.5){ scheduleKick(barStartT+BEAT_LEN*1, vol*0.45*d); scheduleKick(barStartT+BEAT_LEN*3, vol*0.45*d); }
+  // Hi-hat: doubles up to 16ths under danger instead of the calm 8th pattern
+  const hats = d>0.5
+    ? [0.25,0.5,0.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75,3,3.25,3.5,3.75]
+    : [0.5, 1, 1.5, 2, 2.5, 3, 3.5];
+  hats.forEach(b => scheduleHat(barStartT + b * BEAT_LEN, vol * (0.3+d*0.25)));
 }
 
 function scheduleKick(t, vol) {
@@ -4032,12 +4180,29 @@ let _lastMoodCheck = 0;
 function tickMusicMood(time) {
   if (time - _lastMoodCheck < 20) return; // check every 20s
   _lastMoodCheck = time;
-  if (!musicEnabled || !AC) return;
-  // Smoothly adjust master gain for night (quieter, more mysterious)
-  if (masterGain) {
-    const targetVol = nightF() > 0.5 ? MUSIC_VOL * 0.65 : MUSIC_VOL;
-    masterGain.gain.setTargetAtTime(targetVol, AC.currentTime, 3.0);
-  }
+  // Volume (including night dimming) is now owned by tickMusicDanger below,
+  // which polls far more often — kept this function/call-site so nothing
+  // else needs to change, but it no longer writes masterGain itself to
+  // avoid the two fighting over the same param every few seconds.
+}
+
+// Reacts much faster than the mood check above — boss fights and meteor
+// storms are short, urgent moments, so this needs a short poll interval
+// to feel responsive rather than static.
+let _dangerLevel=0,_lastDangerCheck=0;
+function tickMusicDanger(time){
+  if(time-_lastDangerCheck<2)return;
+  _lastDangerCheck=time;
+  if(!G)return;
+  let target=0;
+  if(G._bossMode||bossWaveActive) target=1;
+  else if(G._waveMode) target=0.7;
+  else if(G.hp<30) target=0.55;
+  else if(meteors&&meteors.length>6) target=0.35;
+  _dangerLevel += (target-_dangerLevel)*0.5; // ease toward target, no hard jumps
+  if(!musicEnabled||!AC||!masterGain)return;
+  const base=nightF()>0.5?MUSIC_VOL*0.65:MUSIC_VOL;
+  masterGain.gain.setTargetAtTime(base*(1+_dangerLevel*0.3), AC.currentTime, 1.2);
 }
 
 // ── Init music button state on page load ──────────────────────
