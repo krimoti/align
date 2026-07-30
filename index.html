@@ -1749,7 +1749,7 @@ function healBurst(wx,y,n=16){
 function repairGround(){
   const step=8,rad=44;
   const i0=Math.max(0,Math.floor((P.wx-rad)/step)),i1=Math.min(terrain.length-1,Math.ceil((P.wx+rad)/step));
-  let found=false;
+  let found=false,minX=Infinity,maxX=-Infinity;
   const seeds=[];
   for(let i=i0;i<=i1;i++){ if(terrain[i]&&terrain[i].dmg) seeds.push(i); }
   // Flood-fill outward from each seed so the WHOLE crater gets leveled,
@@ -1759,10 +1759,22 @@ function repairGround(){
   seeds.forEach(seedI=>{
     for(let dir=-1;dir<=1;dir+=2){
       let i=seedI;
-      while(terrain[i]&&terrain[i].dmg){ terrain[i].h=terrain[i].origH; terrain[i].dmg=0; found=true; i+=dir; }
+      while(terrain[i]&&terrain[i].dmg){
+        terrain[i].h=terrain[i].origH;terrain[i].dmg=0;found=true;
+        if(terrain[i].x<minX)minX=terrain[i].x;
+        if(terrain[i].x>maxX)maxX=terrain[i].x;
+        i+=dir;
+      }
     }
   });
   if(found){
+    // The dark scorch-mark ellipse a meteor leaves behind (`craters`) is a
+    // separate cosmetic layer from the terrain heightmap above, with its
+    // own ~25s fade timer — repairing the terrain never cleared it, so a
+    // freshly-flattened patch still had a dark "hole" painted on top of it
+    // until that timer ran out. That's what actually looked like the
+    // repair carving a hole instead of filling one.
+    craters=craters.filter(c=>!(c.wx+c.r>minX-10 && c.wx-c.r<maxX+10));
     G._groundRepairs=(G._groundRepairs||0)+1;
     healBurst(P.wx,groundAt(P.wx));
     spop(wtW(P.wx),P.y-24,'🔧 '+t('groundRepairedMsg'),'#00ff88');
@@ -3237,7 +3249,7 @@ function loop(ts=0){
   if(G.comboT>0){G.comboT-=dt;if(G.comboT<=0)G.combo=0;}
   if(G.shieldOn){G.shieldT--;if(G.shieldT<=0)G.shieldOn=false;}
   if(G.beamOn){G.beamT--;if(G.beamT<=0)G.beamOn=false;}
-  if(Math.random()<G.meteorRate+G.level*.001+nightF()*.004)spawnMeteor();
+  if(meteors.length<40 && Math.random()<G.meteorRate+G.level*.001+nightF()*.004)spawnMeteor();
   meteors=meteors.filter(m=>{
     m.trail.push({wx:m.wx,y:m.y});if(m.trail.length>16)m.trail.shift();
     m.wx+=m.vx;m.y+=m.vy;m.glowP+=.18;
