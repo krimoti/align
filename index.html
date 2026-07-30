@@ -1736,7 +1736,7 @@ function damageGround(wx,r){
 }
 function groundDamagedNear(wx){
   const step=8;const i=Math.round(wx/step);
-  for(let k=-5;k<=5;k++){const p=terrain[i+k];if(p&&p.dmg)return true;}
+  for(let k=-28;k<=28;k++){const p=terrain[i+k];if(p&&p.dmg)return true;}
   return false;
 }
 function healBurst(wx,y,n=16){
@@ -1747,27 +1747,38 @@ function healBurst(wx,y,n=16){
   }
 }
 function repairGround(){
-  const step=8,rad=44;
-  const i0=Math.max(0,Math.floor((P.wx-rad)/step)),i1=Math.min(terrain.length-1,Math.ceil((P.wx+rad)/step));
+  // A wide fixed radius rather than only flood-filling the one contiguous
+  // crater under the player — meteors fall constantly, so it's common for
+  // two SEPARATE (non-touching) damaged patches to sit right next to each
+  // other. Only fixing the contiguous one left the neighboring patch
+  // untouched, which looked exactly like a brand new crack appearing right
+  // beside the repair. This clears everything nearby in one press instead.
+  const rad=220;
   let found=false,minX=Infinity,maxX=-Infinity;
-  const seeds=[];
-  for(let i=i0;i<=i1;i++){ if(terrain[i]&&terrain[i].dmg) seeds.push(i); }
-  // Flood-fill outward from each seed so the WHOLE crater gets leveled,
-  // not just the part within `rad` — a wide crater (from a big meteor)
-  // is bigger than the detection radius, so only repairing the center
-  // left the rim still sunken, which looked like the repair did nothing.
-  seeds.forEach(seedI=>{
-    for(let dir=-1;dir<=1;dir+=2){
-      let i=seedI;
-      while(terrain[i]&&terrain[i].dmg){
-        terrain[i].h=terrain[i].origH;terrain[i].dmg=0;found=true;
-        if(terrain[i].x<minX)minX=terrain[i].x;
-        if(terrain[i].x>maxX)maxX=terrain[i].x;
-        i+=dir;
-      }
+  for(const p of terrain){
+    if(p.dmg && Math.abs(p.x-P.wx)<rad){
+      p.h=p.origH;p.dmg=0;found=true;
+      if(p.x<minX)minX=p.x;
+      if(p.x>maxX)maxX=p.x;
     }
-  });
+  }
   if(found){
+    // The raw original terrain profile (origH) is naturally jagged by
+    // design — small random bumps, up to ~25 units between adjacent
+    // points, every so often a bigger one. Snapping straight back to that
+    // raw profile could create a sudden jump right where the repaired
+    // patch meets its surroundings (especially visible right next to a
+    // building's flat platform) — reads as a brand new notch. Smooth the
+    // repaired stretch plus a small margin so it blends in instead.
+    const step=8;
+    const iMin=Math.max(0,Math.floor((minX-24)/step)),iMax=Math.min(terrain.length-1,Math.ceil((maxX+24)/step));
+    const smoothed=[];
+    for(let i=iMin;i<=iMax;i++){
+      const prev=terrain[i-1]?terrain[i-1].h:terrain[i].h;
+      const next=terrain[i+1]?terrain[i+1].h:terrain[i].h;
+      smoothed.push(prev*0.25+terrain[i].h*0.5+next*0.25);
+    }
+    for(let i=iMin;i<=iMax;i++) terrain[i].h=smoothed[i-iMin];
     // The dark scorch-mark ellipse a meteor leaves behind (`craters`) is a
     // separate cosmetic layer from the terrain heightmap above, with its
     // own ~25s fade timer — repairing the terrain never cleared it, so a
