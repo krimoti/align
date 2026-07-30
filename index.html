@@ -2610,7 +2610,6 @@ function askConfirm(msg,yesLabel,noLabel,onYes){
 // so checkpoint at natural break points (stage start, building
 // placed, truck bought/detached) plus a periodic safety-net save.
 // ════════════════════════════════════════════════════════════
-let _autosaveTimer=null;
 function saveGame(){
   if(gameMode!=='campaign'||!G||!G.running||G.over)return;
   try{
@@ -3372,12 +3371,21 @@ function drawBuildingShape(type,bx,by,w,h,col,damage){
     ctx.shadowBlur=b.damage>0?20:6;ctx.shadowColor=b.damage>0?'#ff4400':b.col;
     // Reveal the full-height shape from the ground up as buildP grows,
     // instead of squashing it vertically — looks like it's rising out of
-    // the ground rather than stretching into shape.
-    ctx.save();ctx.beginPath();ctx.rect(bx-4,by-4,b.pw+8,b.ph*b.buildP+30);ctx.clip();
-    drawBuildingShape(b.type,bx,fullBy,b.pw,b.ph,b.col,b.damage);
-    ctx.restore();
-    if(night>.35&&b.buildP>=1){const wa=Math.min(1,(night-.35)/.4);for(let wx=bx+5;wx<bx+b.pw-10;wx+=12){for(let wy=by+6;wy<by+b.ph-8;wy+=13){const fl=Math.sin(b.lightP+G.time*3+wx+wy)>.2?1:.6;ctx.fillStyle=`rgba(255,230,100,${wa*.8*fl})`;ctx.beginPath();ctx.roundRect(wx,wy,6,8,1);ctx.fill();}}}
+    // the ground rather than stretching into shape. clip() is one of the
+    // pricier canvas ops, so only pay for it during the brief construction
+    // animation — once a building is finished it's drawn directly, since
+    // otherwise EVERY building ever placed (they persist across all 10
+    // campaign stages) was clipping every single frame forever, and that
+    // cost only grows the further into the campaign you get.
+    if(b.buildP<1){
+      ctx.save();ctx.beginPath();ctx.rect(bx-4,by-4,b.pw+8,b.ph*b.buildP+30);ctx.clip();
+      drawBuildingShape(b.type,bx,fullBy,b.pw,b.ph,b.col,b.damage);
+      ctx.restore();
+    }else{
+      drawBuildingShape(b.type,bx,fullBy,b.pw,b.ph,b.col,b.damage);
+    }
     ctx.shadowBlur=0;
+    if(night>.35&&b.buildP>=1){const wa=Math.min(1,(night-.35)/.4);for(let wx=bx+5;wx<bx+b.pw-10;wx+=12){for(let wy=by+6;wy<by+b.ph-8;wy+=13){const fl=Math.sin(b.lightP+G.time*3+wx+wy)>.2?1:.6;ctx.fillStyle=`rgba(255,230,100,${wa*.8*fl})`;ctx.beginPath();ctx.roundRect(wx,wy,6,8,1);ctx.fill();}}}
     if((b.level||1)>1){ctx.fillStyle='#ffd700';ctx.font='bold 9px Orbitron,monospace';ctx.textAlign='center';ctx.fillText('★'+(b.level),scx,by-4);}
     if(b.damage>0){ctx.strokeStyle='rgba(255,80,0,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(bx+b.pw*.28,by+b.ph*.18);ctx.lineTo(bx+b.pw*.6,by+b.ph*.5);ctx.lineTo(bx+b.pw*.38,by+b.ph*.72);ctx.stroke();}
     ctx.restore();
@@ -3500,7 +3508,7 @@ function getPlayerGlow(){
   if(lv>=3)return{blur:17,color:'#00f5ff'};
   return{blur:14,color:baseColor};
 }
-function drawPlayerLegs(walking){
+function drawPlayerBody(walking){
   // Skip for characters whose own emoji art already includes a body/legs
   // (wizard/scout/engineer), and for poses that already show full limbs
   // (falling 🤸, hit 😵) or the level-7 armored form (🦾).
@@ -3511,10 +3519,9 @@ function drawPlayerLegs(walking){
   const liftR = walking ? Math.max(0, swing)*3 : 0;
   const kick  = walking ? swing*1.6 : 0;
   ctx.save();
-  ctx.globalAlpha=0.9;
-  ctx.fillStyle='#2b2b2b';
-  ctx.beginPath();ctx.ellipse(-5+kick, 19-liftL, 2.5, 6, 0, 0, Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse( 5-kick, 19-liftR, 2.5, 6, 0, 0, Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ffffff';ctx.font='15px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.save();ctx.translate(-5+kick, 19-liftL);ctx.scale(-1,1);ctx.fillText('🦵',0,0);ctx.restore();
+  ctx.save();ctx.translate(5-kick, 19-liftR);ctx.fillText('🦵',0,0);ctx.restore();
   ctx.restore();
 }
 function drawPlayerAccessories(){
@@ -3602,7 +3609,8 @@ function drawPlayer(){
   // low enough to clearly stick out below it as separate "feet" rather
   // than a disconnected extra icon — an earlier attempt drew them BEHIND
   // the glyph and too close to it, so the opaque emoji art mostly hid them.
-  drawPlayerLegs(walking);
+  // A later attempt (full torso+arms body) looked worse, not better — reverted.
+  try{ drawPlayerBody(walking); }catch(e){}
 
   // Accessories (helmet, armor, wings) — clean, no shadow
   drawPlayerAccessories();
