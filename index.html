@@ -595,7 +595,6 @@ canvas {
 #music-toggle .mt-ico { font-size:clamp(16px,3.5vmin,22px); }
 #music-toggle .mt-lbl { }
 #music-toggle.off { opacity:.45; }
-#music-toggle.off .mt-lbl::after { content:" (כבוי)"; }
 
 /* In-game music indicator (top HUD) */
 #music-hud-btn {
@@ -1361,7 +1360,7 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const lerpRGB=(a,b,t)=>a.map((v,i)=>Math.round(lerp(v,b[i],t)));
 const nightF=()=>Math.sin(G.dayPhase)*.5+.5;
-const playerName=()=>document.getElementById('player-name').value.trim()||'חייזר-1';
+const playerName=()=>document.getElementById('player-name').value.trim()||t('defaultPlayerName');
 
 function getReservedH(){
   const cs = getComputedStyle(document.documentElement);
@@ -1602,7 +1601,7 @@ function lbAdd(score,level,stage,mode,name){
 function lbHTML(lb){
   if(!lb.length)return'';
   const m=['🥇','🥈','🥉','4','5'];
-  return'<div class="lb-title">🏆 שיאים</div>'+lb.map((e,i)=>`<div class="lb-row"><span class="lb-rank">${m[i]}</span><span class="lb-name">${e.name||'?'}</span><span class="lb-score">${e.score}</span><span class="lb-meta">ר${e.level}·ש${e.stage}·${e.date}</span></div>`).join('');
+  return'<div class="lb-title">'+t('lbTitleMsg')+'</div>'+lb.map((e,i)=>`<div class="lb-row"><span class="lb-rank">${m[i]}</span><span class="lb-name">${e.name||'?'}</span><span class="lb-score">${e.score}</span><span class="lb-meta">${t('lbLevelAbbr')}${e.level}·${t('lbStageAbbr')}${e.stage}·${e.date}</span></div>`).join('');
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2010,6 +2009,7 @@ const T = {
     continueTitle:'המשך משחק', continueDesc:'שלב', resumedMsg:'המשחק שוחזר!',
     overwriteSaveConfirm:'יש לך משחק שמור. התחלת קמפיין חדש תמחק אותו. להמשיך?',
     hintDash:'הקש פעמיים מהר על ⬅️ או ➡️ כדי לדלג בחלל!', hintRepair:'לחץ על כפתור הבנייה כדי לתקן את הקרקע הפגועה!', hintTruck:'יש לך מספיק ניקוד למשאית טילים אוטומטית! לחץ למעלה 🚚',
+    offSuffix:' (כבוי)',
     // Stage screen
     stageEyebrow:'שלב', stageGoalsHdr:'🎯 יעדי השלב',
     // Actions / toasts
@@ -2017,8 +2017,9 @@ const T = {
     buildOccupied:'❌ מקום תפוס!',
     buildOk:'✅ נבנה!', buildPop:'+תושבים',
     collectNear:'💎 התקרב לגביש!',
-    shieldLow:'❌ אין מספיק לחיצה', shieldOn:'🛡️ מגן!',
-    beamLow:'❌ לקרן', beamOn:'🔆 קרן!',
+    shieldOn:'🛡️ מגן!',
+    forShieldMsg:'⚡ למגן',
+    beamOn:'🔆 קרן!',
     lightningLow:'❌ לברק', lightningNoTarget:'⚡ אין מטאורים בטווח!',
     // Shop
     shopTitle:'🏪 חנות קוסמית', shopSkip:'דלג →',
@@ -2048,6 +2049,11 @@ const T = {
     // Toasts / misc
     builtSuffix:'נבנה!', destroyedSuffix:'נהרס!', damagedSuffix:'נפגע! לחץ לתיקון',
     repairedMsg:'תוקן!', skyCleanMsg:'שמיים נקיים!', freeLabel:'חינם',
+    notEnoughMsg:'❌ אין מספיק', upgradedMsg:'⬆️ שודרג!', repairBtn:'🔧 תקן', soldMsg:'💰 נמכר',
+    lbTitleMsg:'🏆 שיאים', freeModeMsg:'🌌 מצב חופשי!', lbLevelAbbr:'ר', lbStageAbbr:'ש',
+    forBeamMsg:'⚡ לקרן', forLightningMsg:'⚡ לברק',
+    bossComingMsg:'👹 בוס מגיע!', waveStormMsg:'⚡ סערה! שרוד 45 שניות!',
+    allUpgradesMsg:'כל השדרוגים פעילים!', defaultPlayerName:'חייזר-1',
     shopChooseItem:'בחר פריט', closeLabel:'✕ סגור',
     objectivesHdr:'יעדי שלב', buildLblColon:'בנה:',
     bpUpgrade:'שדרג', bpSell:'מכור',
@@ -2119,6 +2125,7 @@ const T = {
     continueTitle:'Continue', continueDesc:'Stage', resumedMsg:'Game restored!',
     overwriteSaveConfirm:'You have a saved game. Starting a new campaign will erase it. Continue?',
     hintDash:'Double-tap ⬅️ or ➡️ quickly to space-dash!', hintRepair:'Press the build button to repair the damaged ground!', hintTruck:'You have enough score for an auto-defense missile truck! Tap 🚚 above', 
+    offSuffix:' (Off)',
     // Stage screen
     stageEyebrow:'Stage', stageGoalsHdr:'🎯 Stage Goals',
     // Actions / toasts
@@ -2126,8 +2133,9 @@ const T = {
     buildOccupied:'❌ Space taken!',
     buildOk:'✅ Built!', buildPop:'+citizens',
     collectNear:'💎 Get closer to a crystal!',
-    shieldLow:'❌ Not enough for shield', shieldOn:'🛡️ Shield!',
-    beamLow:'❌ for beam', beamOn:'🔆 Beam!',
+    shieldOn:'🛡️ Shield!',
+    forShieldMsg:'⚡ for shield',
+    beamOn:'🔆 Beam!',
     lightningLow:'❌ for lightning', lightningNoTarget:'⚡ No meteors in range!',
     // Shop
     shopTitle:'🏪 Cosmic Shop', shopSkip:'Skip →',
@@ -2157,6 +2165,11 @@ const T = {
     // Toasts / misc
     builtSuffix:'Built!', destroyedSuffix:'destroyed!', damagedSuffix:'damaged! Tap to repair',
     repairedMsg:'Repaired!', skyCleanMsg:'Sky is clear!', freeLabel:'Free',
+    notEnoughMsg:'❌ Not enough', upgradedMsg:'⬆️ Upgraded!', repairBtn:'🔧 Repair', soldMsg:'💰 Sold',
+    lbTitleMsg:'🏆 High Scores', freeModeMsg:'🌌 Free mode!', lbLevelAbbr:'L', lbStageAbbr:'S',
+    forBeamMsg:'⚡ for beam', forLightningMsg:'⚡ for lightning',
+    bossComingMsg:'👹 Boss incoming!', waveStormMsg:'⚡ Storm! Survive 45 seconds!',
+    allUpgradesMsg:'All upgrades active!', defaultPlayerName:'Alien-1',
     shopChooseItem:'Choose item', closeLabel:'✕ Close',
     objectivesHdr:'Stage goals', buildLblColon:'Build:',
     bpUpgrade:'Upgrade', bpSell:'Sell',
@@ -2238,11 +2251,11 @@ function applyLang(){
   const nl = document.querySelector('.name-lbl');
   if(nl) nl.textContent = t('nameLabel');
   setPlaceholder('player-name', 'namePlaceholder');
-  const mbtns = document.querySelectorAll('.mode-btn');
+  const mbtns = document.querySelectorAll('.mode-row .mode-btn');
   if(mbtns[0]){mbtns[0].querySelector('.m-title').textContent=t('campaignTitle');mbtns[0].querySelector('.m-desc').textContent=t('campaignDesc');}
   if(mbtns[1]){mbtns[1].querySelector('.m-title').textContent=t('freeTitle');mbtns[1].querySelector('.m-desc').textContent=t('freeDesc');}
   const mtl = document.querySelector('.mt-lbl');
-  if(mtl) mtl.textContent = t('musicLabel');
+  if(mtl) updateMusicLabel();
 
   // ── Character screen ──
   setText('char-title',      'charTitle');
@@ -2303,6 +2316,7 @@ function applyLang(){
   if(lbl) lbl.textContent = t(coopMode ? 'coopOn' : 'coopOff');
 
   // ── Controls legend (intro screen) ──
+  setText('cg-arrows-l',   'ctrlArrowsLbl');
   setText('cg-arrows-d',   'ctrlArrowsDesc');
   setText('cg-build-d',    'ctrlBuildDesc');
   setText('cg-collect-d',  'ctrlCollectDesc');
@@ -2646,13 +2660,13 @@ function openBldPopup(b,sx,sy){
   const upCost=Math.floor(BUILD_DATA[b.type].cost*((b.level||1)+1)*.6);
   const bpUp=document.getElementById('bp-upgrade');
   bpUp.innerHTML=`🔼 ${t('bpUpgrade')} <span class="bpb-cost">${upCost}⚡</span>`;
-  bpUp.onclick=()=>{if(G.energy<upCost){toast('❌ אין מספיק');return;}G.energy-=upCost;b.level=(b.level||1)+1;b.pop+=Math.floor(BUILD_DATA[b.type].pop*.5);G.pop+=Math.floor(BUILD_DATA[b.type].pop*.5);b.damage=0;burst(b.wx,b.y-b.ph/2,'#ffd700',16,5);sfxBuild();haptic(40);closeBldPopup();updateHUD();toast('⬆️ שודרג!');};
+  bpUp.onclick=()=>{if(G.energy<upCost){toast(t('notEnoughMsg'));return;}G.energy-=upCost;b.level=(b.level||1)+1;b.pop+=Math.floor(BUILD_DATA[b.type].pop*.5);G.pop+=Math.floor(BUILD_DATA[b.type].pop*.5);b.damage=0;burst(b.wx,b.y-b.ph/2,'#ffd700',16,5);sfxBuild();haptic(40);closeBldPopup();updateHUD();toast(t('upgradedMsg'));};
   const bpRep=document.getElementById('bp-repair');
-  if(b.damage>0){bpRep.style.display='block';bpRep.innerHTML='🔧 תקן <span class="bpb-cost">15⚡</span>';bpRep.onclick=()=>{if(G.energy<15){toast('❌ אין מספיק');return;}G.energy-=15;b.damage=0;sfxBuild();haptic(30);closeBldPopup();toast('🔧 תוקן!');};}else bpRep.style.display='none';
+  if(b.damage>0){bpRep.style.display='block';bpRep.innerHTML=t('repairBtn')+' <span class="bpb-cost">15⚡</span>';bpRep.onclick=()=>{if(G.energy<15){toast(t('notEnoughMsg'));return;}G.energy-=15;b.damage=0;sfxBuild();haptic(30);closeBldPopup();toast('🔧 '+t('repairedMsg'));};}else bpRep.style.display='none';
   const sv=Math.floor(BUILD_DATA[b.type].cost*.4);
   const bpSell=document.getElementById('bp-sell');
   bpSell.innerHTML=`💰 ${t('bpSell')} <span class="bpb-cost">+${sv}⚡</span>`;
-  bpSell.onclick=()=>{G.energy+=sv;G.homes--;G.pop-=b.pop;buildings=buildings.filter(x=>x!==b);burst(b.wx,b.y-b.ph/2,'#ffd700',12,4);sfxUI();haptic(30);closeBldPopup();updateHUD();toast('💰 נמכר +'+sv+'⚡');};
+  bpSell.onclick=()=>{G.energy+=sv;G.homes--;G.pop-=b.pop;buildings=buildings.filter(x=>x!==b);burst(b.wx,b.y-b.ph/2,'#ffd700',12,4);sfxUI();haptic(30);closeBldPopup();updateHUD();toast(t('soldMsg')+' +'+sv+'⚡');};
   const popup=document.getElementById('bld-popup');
   popup.style.left=clamp(sx-90,8,W-200)+'px';popup.style.top=clamp(sy-160,50,H-220)+'px';
   popup.style.display='block';G.paused=true;
@@ -2816,7 +2830,7 @@ function resetAll(){
   initBg();buildTerrain();spawnCrystals(14);
   updateHUD();updateBuildPanel();updateCycleBtn();
   if(gameMode==='campaign')setTimeout(()=>showStageScreen(0),300);
-  else{stageActive=true;toast('🌌 מצב חופשי!');}
+  else{stageActive=true;toast(t('freeModeMsg'));}
   if(!rafId)loop();
 }
 function spawnCrystals(n){const ww=worldW()||W*3;for(let i=0;i<n;i++){const wx=rnd(60,ww-60);const tc=currentTheme();crystals.push({wx,y:groundAt(wx)-14,r:rnd(7,13),color:pick(tc.crystalColors||COLORS),pulse:rnd(0,6.28),floatY:rnd(0,6.28),val:irnd(1,3)});}}
@@ -2934,10 +2948,10 @@ function doCollect(){
   if(got){if(crystals.length<8)spawnCrystals(5);updateHUD();checkLvl();}
   else toast(t('collectNear'));
 }
-function doShield(){const sc=G._shieldCost||5;if(G.energy<sc){toast('❌ '+sc+'⚡ '+t('shieldLow').replace('❌ ',''));return;}G.energy-=sc;G.shieldOn=true;G.shieldT=G.up.superShield?300:100;burst(P.wx,P.y-10,'#00eeff',16,4);sfxShield();haptic(30);toast(t('shieldOn'));updateHUD();}
-function doBeam(){const bc=G._beamCost||8;if(G.energy<bc){toast('❌ '+bc+'⚡ לקרן');return;}G.energy-=bc;G.beamOn=true;G.beamT=50;sfxBeam();haptic(40);updateHUD();}
+function doShield(){const sc=G._shieldCost||5;if(G.energy<sc){toast('❌ '+sc+t('forShieldMsg'));return;}G.energy-=sc;G.shieldOn=true;G.shieldT=G.up.superShield?300:100;burst(P.wx,P.y-10,'#00eeff',16,4);sfxShield();haptic(30);toast(t('shieldOn'));updateHUD();}
+function doBeam(){const bc=G._beamCost||8;if(G.energy<bc){toast('❌ '+bc+t('forBeamMsg'));return;}G.energy-=bc;G.beamOn=true;G.beamT=50;sfxBeam();haptic(40);updateHUD();}
 function doLightning(){
-  if(G.energy<10){toast('❌ 10⚡ לברק');return;}G.energy-=10;sfxLightning();haptic(55);
+  if(G.energy<10){toast('❌ 10'+t('forLightningMsg'));return;}G.energy-=10;sfxLightning();haptic(55);
   const hit=meteors.filter(m=>Math.hypot(m.wx-P.wx,m.y-P.y)<180);
   hit.forEach(m=>{m.hp-=G.up.bossKiller?999:1;lightningBolts.push({x1:wtW(P.wx),y1:P.y,x2:wtW(m.wx),y2:m.y,life:12});if(m.hp<=0){burst(m.wx,m.y,'#bf5fff',18,7);if(m.isBoss){G._bossKills++;G._bossSpawnT=9;spop(wtW(m.wx),m.y,'💥 BOSS!','#ff00ff');}G.score+=m.isBoss?55:8;G.xp+=m.isBoss?30:10;}});
   meteors=meteors.filter(m=>m.hp>0);if(hit.length)screenShake(8,16);
@@ -2990,7 +3004,7 @@ function showLevelUp(){
   const avail=UPGRADES.filter(u=>!G.up[u.id]).sort(()=>Math.random()-.5).slice(0,3);
   document.getElementById('lu-sub').textContent=t('hudLevel')+' '+G.level+' — '+t('levelUpSub');
   const ch=document.getElementById('lu-choices');ch.innerHTML='';
-  if(!avail.length)avail.push({id:'__b',name:'💫 +100⚡',desc:'כל השדרוגים פעילים!',ico:'💫'});
+  if(!avail.length)avail.push({id:'__b',name:'💫 +100⚡',desc:t('allUpgradesMsg'),ico:'💫'});
   avail.forEach(u=>{const btn=document.createElement('button');btn.className='lu-opt';btn.innerHTML=`<div class="lu-ico">${u.ico}</div><div><div class="lu-name">${tt(u.name)}</div><div class="lu-desc">${tt(u.desc)}</div></div>`;btn.onclick=()=>{if(u.id==='__b')G.energy+=100;else{G.up[u.id]=true;if(u.id==='companion')spawnCompanion();}document.getElementById('levelup').classList.remove('show');G.paused=false;updateHUD();toast('✅ '+tt(u.name));};ch.appendChild(btn);});
   document.getElementById('levelup').classList.add('show');
 }
@@ -3025,8 +3039,8 @@ function beginStage(){
   document.getElementById('stage-badge').style.display='block';
   document.getElementById('objectives').style.display='block';
   updateObjectives();
-  if(s.bossMode){meteors=[];toast('👹 בוס מגיע!');}
-  if(s.waveMode)toast('⚡ סערה! שרוד 45 שניות!');
+  if(s.bossMode){meteors=[];toast(t('bossComingMsg'));}
+  if(s.waveMode)toast(t('waveStormMsg'));
   if(stageIdx===0)setTimeout(()=>hintOnce('dash','💫 '+t('hintDash')),4000);
   saveGame();
 }
@@ -3156,14 +3170,14 @@ function drawMinimap(){
 let powerups=[];
 let _nextPowerupT=30;
 const POWERUP_TYPES=[
-  {id:'shield', emoji:'🛡️',label:'מגן!',    color:'#00eeff',fn:()=>{G.shieldOn=true;G.shieldT=200;sfxShield();}},
-  {id:'energy', emoji:'⚡', label:'+30⚡',    color:'#ffd700',fn:()=>{G.energy+=30;}},
-  {id:'freeze', emoji:'❄️', label:'הקפאה!',  color:'#aaeeff',fn:()=>{meteors.forEach(m=>{m.vx*=.1;m.vy*=.1;});setTimeout(()=>meteors.forEach(m=>{m.vx*=10;m.vy*=10;}),3000);}},
-  {id:'beam',   emoji:'🔆', label:'קרן!',    color:'#ffff00',fn:()=>{G.beamOn=true;G.beamT=120;sfxBeam();}},
-  {id:'hp',     emoji:'💊', label:'חיים!',   color:'#ff88aa',fn:()=>{G.hp=Math.min(G.maxHp,G.hp+30);}},
-  {id:'score',  emoji:'🌟', label:'+100!',   color:'#ffcc00',fn:()=>{G.score+=100;G.xp+=20;checkLvl();}},
-  {id:'magnet2',emoji:'🧲', label:'מגנט!',   color:'#aa88ff',fn:()=>{G.up.magnet=true;toast('🧲 מגנט!');}},
-  {id:'tele',   emoji:'🌀', label:'טלפורט!', color:'#ff44ff',fn:()=>{P.wx=rnd(100,worldW()-100);burst(P.wx,P.y,'#ff44ff',20,6);}},
+  {id:'shield', emoji:'🛡️',label:{he:'מגן!',en:'Shield!'},    color:'#00eeff',fn:()=>{G.shieldOn=true;G.shieldT=200;sfxShield();}},
+  {id:'energy', emoji:'⚡', label:{he:'+30⚡',en:'+30⚡'},    color:'#ffd700',fn:()=>{G.energy+=30;}},
+  {id:'freeze', emoji:'❄️', label:{he:'הקפאה!',en:'Freeze!'},  color:'#aaeeff',fn:()=>{meteors.forEach(m=>{m.vx*=.1;m.vy*=.1;});setTimeout(()=>meteors.forEach(m=>{m.vx*=10;m.vy*=10;}),3000);}},
+  {id:'beam',   emoji:'🔆', label:{he:'קרן!',en:'Beam!'},    color:'#ffff00',fn:()=>{G.beamOn=true;G.beamT=120;sfxBeam();}},
+  {id:'hp',     emoji:'💊', label:{he:'חיים!',en:'HP!'},   color:'#ff88aa',fn:()=>{G.hp=Math.min(G.maxHp,G.hp+30);}},
+  {id:'score',  emoji:'🌟', label:{he:'+100!',en:'+100!'},   color:'#ffcc00',fn:()=>{G.score+=100;G.xp+=20;checkLvl();}},
+  {id:'magnet2',emoji:'🧲', label:{he:'מגנט!',en:'Magnet!'},   color:'#aa88ff',fn:()=>{G.up.magnet=true;toast('🧲 '+tt({he:'מגנט!',en:'Magnet!'}));}},
+  {id:'tele',   emoji:'🌀', label:{he:'טלפורט!',en:'Teleport!'}, color:'#ff44ff',fn:()=>{P.wx=rnd(100,worldW()-100);burst(P.wx,P.y,'#ff44ff',20,6);}},
 ];
 function spawnPowerup(){
   const ww=worldW()||W*3;const type=pick(POWERUP_TYPES);
@@ -3171,7 +3185,7 @@ function spawnPowerup(){
 }
 function applyPowerup(pu){
   pu.type.fn();haptic(60);burst(pu.wx,pu.y,pu.type.color,20,6);
-  spop(wtW(pu.wx),pu.y-20,pu.type.emoji+' '+pu.type.label,pu.type.color);
+  spop(wtW(pu.wx),pu.y-20,pu.type.emoji+' '+tt(pu.type.label),pu.type.color);
   sfx(880,.15,'sine',.1,1.5);updateHUD();
 }
 function tickPowerups(dt){
@@ -3202,7 +3216,7 @@ function drawPowerups(){
     ctx.beginPath();ctx.arc(0,0,pu.r+4,0,Math.PI*2);ctx.fillStyle=pu.type.color+'33';ctx.fill();
     const rr=pu.r+8+Math.sin(pu.pulse)*4;ctx.strokeStyle=pu.type.color+'88';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);ctx.stroke();
     ctx.shadowBlur=0;ctx.fillStyle='#ffffff';ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pu.type.emoji,0,0);
-    ctx.font='bold 8px Orbitron,monospace';ctx.fillStyle=pu.type.color;ctx.fillText(pu.type.label,0,pu.r+14);
+    ctx.font='bold 8px Orbitron,monospace';ctx.fillStyle=pu.type.color;ctx.fillText(tt(pu.type.label),0,pu.r+14);
     ctx.restore();
   });
 }
@@ -3244,7 +3258,7 @@ function loop(ts=0){
   tickWeather(dt);
   if(stageActive&&gameMode==='campaign'){
     if(G._waveMode)G._waveT+=dt;
-    if(G._bossMode&&G._bossKills<3){G._bossSpawnT-=dt;if(G._bossSpawnT<=0&&!meteors.some(m=>m.isBoss)){spawnMeteor(true);G._bossSpawnT=999;toast('👹 בוס מגיע!');screenShake(8,18);}}
+    if(G._bossMode&&G._bossKills<3){G._bossSpawnT-=dt;if(G._bossSpawnT<=0&&!meteors.some(m=>m.isBoss)){spawnMeteor(true);G._bossSpawnT=999;toast(t('bossComingMsg'));screenShake(8,18);}}
     if(Math.floor(G.time*20)%20===0)updateObjectives();
     checkStageComplete();
   }
@@ -3557,8 +3571,8 @@ function drawBossFace(scx,scy,r){
   ctx.restore();
   // UI overlay bars
   xUi.clearRect(0,0,W,H);
-  if(G.shieldOn){const pct=G.shieldT/(G.up.superShield?300:100);xUi.fillStyle='rgba(0,220,255,.1)';xUi.fillRect(W/2-56,H-52,112*pct,5);xUi.strokeStyle='rgba(0,220,255,.4)';xUi.lineWidth=1;xUi.strokeRect(W/2-56,H-52,112,5);xUi.fillStyle='rgba(0,240,255,.78)';xUi.font='7px Orbitron,monospace';xUi.textAlign='center';xUi.fillText('🛡 מגן',W/2,H-56);}
-  if(G.beamOn){const pct=G.beamT/50;xUi.fillStyle='rgba(255,255,0,.1)';xUi.fillRect(W/2-56,H-64,112*pct,5);xUi.strokeStyle='rgba(255,255,0,.4)';xUi.lineWidth=1;xUi.strokeRect(W/2-56,H-64,112,5);xUi.fillStyle='rgba(255,255,0,.78)';xUi.font='7px Orbitron,monospace';xUi.textAlign='center';xUi.fillText('🔆 קרן',W/2,H-68);}
+  if(G.shieldOn){const pct=G.shieldT/(G.up.superShield?300:100);xUi.fillStyle='rgba(0,220,255,.1)';xUi.fillRect(W/2-56,H-52,112*pct,5);xUi.strokeStyle='rgba(0,220,255,.4)';xUi.lineWidth=1;xUi.strokeRect(W/2-56,H-52,112,5);xUi.fillStyle='rgba(0,240,255,.78)';xUi.font='7px Orbitron,monospace';xUi.textAlign='center';xUi.fillText(t('shieldOn'),W/2,H-56);}
+  if(G.beamOn){const pct=G.beamT/50;xUi.fillStyle='rgba(255,255,0,.1)';xUi.fillRect(W/2-56,H-64,112*pct,5);xUi.strokeStyle='rgba(255,255,0,.4)';xUi.lineWidth=1;xUi.strokeRect(W/2-56,H-64,112,5);xUi.fillStyle='rgba(255,255,0,.78)';xUi.font='7px Orbitron,monospace';xUi.textAlign='center';xUi.fillText(t('beamOn'),W/2,H-68);}
   const hpP=G.hp/G.maxHp;xUi.fillStyle='rgba(0,0,0,.4)';xUi.fillRect(W-110,8,100,6);xUi.fillStyle=hpP>.5?'#00ff88':hpP>.25?'#ffaa00':'#ff4444';xUi.fillRect(W-110,8,100*hpP,6);xUi.strokeStyle='rgba(255,255,255,.16)';xUi.lineWidth=1;xUi.strokeRect(W-110,8,100,6);
 }
 
@@ -3715,7 +3729,7 @@ function drawPlayer2(){
   // Name tag
   ctx.font='bold 7px Orbitron,monospace';ctx.textAlign='center';
   ctx.fillStyle='#bf5fff';
-  ctx.fillText(t('player2Name')||'שחקן 2',0,-32);
+  ctx.fillText(t('player2Name'),0,-32);
   ctx.restore();
 }
 
@@ -3909,11 +3923,16 @@ function toggleMusic() {
 
 function updateMusicBtns() {
   document.getElementById('music-toggle')?.classList.toggle('off', !musicEnabled);
+  updateMusicLabel();
   const hud = document.getElementById('music-hud-btn');
   if (hud) {
     hud.textContent = musicEnabled ? '🎵' : '🔇';
     hud.classList.toggle('off', !musicEnabled);
   }
+}
+function updateMusicLabel(){
+  const mtl = document.querySelector('.mt-lbl');
+  if (mtl) mtl.textContent = t('musicLabel') + (musicEnabled ? '' : t('offSuffix'));
 }
 
 // ════════════════════════════════════════════════════════════
